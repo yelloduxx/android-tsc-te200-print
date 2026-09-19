@@ -71,6 +71,14 @@
     <string name="btn_stop_print">Остановить печать</string>
     <string name="btn_history">История</string>
     <string name="btn_diagnostics">Диагностика</string>
+    <string name="btn_quick_share">Быстрая печать Share</string>
+    <string name="quick_share_settings">Быстрая печать из Share</string>
+    <string name="quick_share_explanation">Для выбранных приложений PDF сразу отправляется на принтер без открытия предпросмотра. Новые задания печатаются одной копией.</string>
+    <string name="quick_share_enabled">Включить быструю печать</string>
+    <string name="quick_share_no_apps">Сначала отправьте PDF через Share из приложения — оно появится здесь.</string>
+    <string name="quick_share_choose_apps">Выберите приложения для автоматической печати:</string>
+    <string name="quick_share_printed">PDF отправлен на печать</string>
+    <string name="quick_share_usb_denied">Доступ к USB отклонён</string>
     <string name="history_empty">Заданий печати ещё нет</string>
     <string name="history_clear">Очистить историю</string>
     <string name="history_unavailable">Файл недоступен</string>

@@ -71,6 +71,14 @@
     <string name="btn_stop_print">Stop printing</string>
     <string name="btn_history">History</string>
     <string name="btn_diagnostics">Diagnostics</string>
+    <string name="btn_quick_share">Quick Share printing</string>
+    <string name="quick_share_settings">Quick printing from Share</string>
+    <string name="quick_share_explanation">For selected apps, PDFs are sent to the printer without opening the preview. New jobs always print one copy.</string>
+    <string name="quick_share_enabled">Enable quick printing</string>
+    <string name="quick_share_no_apps">Share a PDF from an app first; it will appear here.</string>
+    <string name="quick_share_choose_apps">Choose apps for automatic printing:</string>
+    <string name="quick_share_printed">PDF sent to printer</string>
+    <string name="quick_share_usb_denied">USB access denied</string>
     <string name="history_empty">No print jobs yet</string>
     <string name="history_clear">Clear history</string>
     <string name="history_unavailable">File unavailable</string>

@@ -34,6 +34,9 @@ multi-page PDFs with barcodes and DataMatrix) straight from your phone — no la
 - **Printer status**: the header shows the state observed by the app (USB connection,
   permission, printing, and transfer errors). The TE200's physical LED states are not
   read directly because the current USB path is send-only.
+- **Experimental Quick Share printing**: selected source apps can send a PDF directly
+  to the USB printer through a transparent share handler. Other apps continue to open
+  the regular preview. The first USB permission request may still require confirmation.
 - **Diagnostics**: the settings screen can show app version and the USB device VID/PID;
   it is intended for troubleshooting connection issues, not as a hardware status query.
 - **Material 3 (Material You)**: dynamic colors on Android 12+, light/dark theme.
@@ -108,6 +111,9 @@ app/src/main/java/com/example/tscprint/
   PageSelection.kt    — page ranges and selected-page state
   PrintHistory.kt     — local metadata-only print history
   HistoryActivity.kt  — separate print history screen
+  QuickShareActivity.kt — optional direct Share-to-USB print path
+  QuickShareSettingsActivity.kt — source-app allowlist for Quick Share
+  QuickShareSettings.kt — local Quick Share preferences
   UsbPrinter.kt       — USB printer discovery, permission, bulk transfer
   PrintSettings.kt    — settings (SharedPreferences)
   LocaleHelper.kt     — per-app language (English / Russian)
@@ -160,6 +166,10 @@ Android‑приложение и **плагин системной печати
   читаются текущим USB-путём, который работает только на отправку.
 - **Диагностика**: в настройках показываются версия приложения и VID/PID USB-устройства;
   это инструмент проверки подключения, а не запрос аппаратного состояния принтера.
+- **Экспериментальная быстрая печать из Share**: для выбранных приложений PDF
+  отправляется на USB-принтер через прозрачный обработчик без открытия предпросмотра;
+  для остальных приложений сохраняется обычный режим. Первый запрос USB-доступа может
+  потребовать подтверждения пользователя.
 - **Material 3 (Material You)**: динамические цвета на Android 12+, тёмная/светлая тема.
 
 ## Требования

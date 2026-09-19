@@ -281,6 +281,9 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .setNeutralButton(R.string.btn_diagnostics) { _, _ -> showDiagnosticsDialog() }
+            .setPositiveButton(R.string.btn_quick_share) { _, _ ->
+                startActivity(Intent(this, QuickShareSettingsActivity::class.java))
+            }
             .show()
     }
 
@@ -729,6 +732,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleShareIntent(intent: Intent?) {
         val uri = sharedUri(intent) ?: return
+        val source = intent?.getStringExtra(ShareSource.EXTRA_SOURCE_PACKAGE)
+            ?: ShareSource.packageName(this, intent ?: Intent())
+        source?.let { QuickShareSettings(this).recordCandidate(it) }
         if (queueRunning) stopPrintQueue()
         selectedUri = uri
         prepared = null
