@@ -111,7 +111,9 @@ class MainActivity : AppCompatActivity() {
         setupEdgeToEdge()
         loadSettings()
         registerPermissionReceiver()
-        handleShareIntent(intent)
+        if (savedInstanceState == null) {
+            handleShareIntent(intent)
+        }
     }
 
     @Deprecated("Deprecated in Java")
