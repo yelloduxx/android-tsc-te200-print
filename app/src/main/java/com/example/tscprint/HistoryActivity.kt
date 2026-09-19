@@ -29,6 +29,7 @@ import com.google.android.material.R as MaterialR
 class HistoryActivity : Activity() {
 
     private val history by lazy { PrintHistory(this) }
+    private val dangerRed = Color.rgb(211, 47, 47)
     private val clearHandler = Handler(Looper.getMainLooper())
     private var clearCountdown = 0
     private var clearButton: MaterialButton? = null
@@ -135,7 +136,7 @@ class HistoryActivity : Activity() {
             return
         }
         clearCountdown = 5
-        button.backgroundTintList = ColorStateList.valueOf(themeColor(MaterialR.attr.colorError))
+        button.backgroundTintList = ColorStateList.valueOf(dangerRed)
         button.setTextColor(themeColor(MaterialR.attr.colorOnError))
         button.text = getString(R.string.history_clear_confirm, clearCountdown)
         clearHandler.postDelayed(clearReset, 1000)
@@ -163,7 +164,7 @@ class HistoryActivity : Activity() {
             imageTintList = ColorStateList.valueOf(Color.WHITE)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setColor(Color.rgb(211, 47, 47))
+                setColor(dangerRed)
                 val radius = dp(12).toFloat()
                 cornerRadii = floatArrayOf(0f, 0f, radius, radius, radius, radius, 0f, 0f)
             }
