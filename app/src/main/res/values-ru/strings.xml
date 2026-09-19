@@ -32,6 +32,10 @@
     <string name="label_gap">Зазор между этикетками, мм</string>
     <string name="label_density">Плотность печати (0–15)</string>
     <string name="label_copies">Количество копий</string>
+    <string name="copies_decrease">Уменьшить количество копий</string>
+    <string name="copies_increase">Увеличить количество копий</string>
+    <string name="copy_order_collated">Комплектами: 1 2 3 4 · 1 2 3 4</string>
+    <string name="copy_order_grouped">Группами: 1 1 · 2 2 · 3 3 · 4 4</string>
 
     <string name="threshold_format">Порог бинаризации: %1$d</string>
 
@@ -58,6 +62,7 @@
     <string name="status_printer_disconnected">Принтер отключён</string>
     <string name="status_printer_permission">Нужно разрешение USB</string>
     <string name="status_printer_ready">Принтер готов</string>
+    <string name="status_printer_error">Ошибка принтера</string>
     <string name="status_printing">Печать</string>
     <string name="status_queue_progress">Печать этикетки %1$d из %2$d…</string>
     <string name="status_queue_done">Напечатано этикеток: %1$d</string>
@@ -72,6 +77,7 @@
     <string name="history_printed">Напечатано</string>
     <string name="history_stopped">Остановлено</string>
     <string name="history_error">Ошибка</string>
+    <string name="close">Закрыть</string>
     <string name="diagnostics_version">Версия: %1$s</string>
     <string name="diagnostics_no_usb">USB-устройства не найдены</string>
     <string name="diagnostics_device">USB: %1$s, VID %2$d, PID %3$d</string>

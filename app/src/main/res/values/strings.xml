@@ -32,6 +32,10 @@
     <string name="label_gap">Gap between labels, mm</string>
     <string name="label_density">Print density (0–15)</string>
     <string name="label_copies">Copies</string>
+    <string name="copies_decrease">Decrease copies</string>
+    <string name="copies_increase">Increase copies</string>
+    <string name="copy_order_collated">Collated: 1 2 3 4 · 1 2 3 4</string>
+    <string name="copy_order_grouped">Grouped: 1 1 · 2 2 · 3 3 · 4 4</string>
 
     <string name="threshold_format">Binarization threshold: %1$d</string>
 
@@ -58,6 +62,7 @@
     <string name="status_printer_disconnected">Printer disconnected</string>
     <string name="status_printer_permission">USB permission required</string>
     <string name="status_printer_ready">Printer ready</string>
+    <string name="status_printer_error">Printer error</string>
     <string name="status_printing">Printing</string>
     <string name="status_queue_progress">Printing label %1$d of %2$d…</string>
     <string name="status_queue_done">Printed %1$d label(s)</string>
@@ -72,6 +77,7 @@
     <string name="history_printed">Printed</string>
     <string name="history_stopped">Stopped</string>
     <string name="history_error">Error</string>
+    <string name="close">Close</string>
     <string name="diagnostics_version">Version: %1$s</string>
     <string name="diagnostics_no_usb">No USB devices found</string>
     <string name="diagnostics_device">USB: %1$s, VID %2$d, PID %3$d</string>

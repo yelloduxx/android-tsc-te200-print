@@ -28,9 +28,14 @@ multi-page PDFs with barcodes and DataMatrix) straight from your phone — no la
 - **State preservation**: the selected PDF and page selection survive language changes;
   changing language does not start a new print job.
 - **Experimental print queue**: the direct-print path can print copies one label at a
-  time and stop between labels.
-- **Print history and diagnostics**: recent document references, USB status, and basic
-  printer diagnostics are available from the header.
+  time, with collated or grouped copy order, and stop between labels.
+- **Print history**: recent document references open on a separate screen; the app stores
+  metadata and the original URI, not a second copy of the PDF.
+- **Printer status**: the header shows the state observed by the app (USB connection,
+  permission, printing, and transfer errors). The TE200's physical LED states are not
+  read directly because the current USB path is send-only.
+- **Diagnostics**: the settings screen can show app version and the USB device VID/PID;
+  it is intended for troubleshooting connection issues, not as a hardware status query.
 - **Material 3 (Material You)**: dynamic colors on Android 12+, light/dark theme.
 
 ## Requirements
@@ -102,6 +107,7 @@ app/src/main/java/com/example/tscprint/
   PagePreviewAdapter.kt — horizontal multi-page preview and page checkboxes
   PageSelection.kt    — page ranges and selected-page state
   PrintHistory.kt     — local metadata-only print history
+  HistoryActivity.kt  — separate print history screen
   UsbPrinter.kt       — USB printer discovery, permission, bulk transfer
   PrintSettings.kt    — settings (SharedPreferences)
   LocaleHelper.kt     — per-app language (English / Russian)
@@ -146,9 +152,14 @@ Android‑приложение и **плагин системной печати
 - **Сохранение состояния**: выбранный PDF и страницы сохраняются при смене языка;
   повторная печать при этом не запускается.
 - **Экспериментальная очередь печати**: прямая печать может печатать копии по одной
-  этикетке и останавливаться между этикетками.
-- **История и диагностика**: в шапке доступны последние задания, статус USB и базовая
-  информация о принтере.
+  этикетке, в порядке комплектов или группами, и останавливаться между этикетками.
+- **История печати**: последние задания открываются на отдельном экране; приложение
+  хранит метаданные и исходный URI, но не создаёт вторую копию PDF.
+- **Статус принтера**: в шапке отображается состояние, которое видит приложение — USB,
+  разрешение, печать и ошибки передачи. Физические состояния лампы TE200 напрямую не
+  читаются текущим USB-путём, который работает только на отправку.
+- **Диагностика**: в настройках показываются версия приложения и VID/PID USB-устройства;
+  это инструмент проверки подключения, а не запрос аппаратного состояния принтера.
 - **Material 3 (Material You)**: динамические цвета на Android 12+, тёмная/светлая тема.
 
 ## Требования
@@ -220,6 +231,7 @@ app/src/main/java/com/example/tscprint/
   PagePreviewAdapter.kt — горизонтальный предпросмотр и галочки страниц
   PageSelection.kt    — диапазоны и состояние выбранных страниц
   PrintHistory.kt     — локальная история без копирования PDF
+  HistoryActivity.kt  — отдельный экран истории заданий
   UsbPrinter.kt       — поиск USB-принтера, разрешение, bulk-передача
   PrintSettings.kt    — настройки (SharedPreferences)
   LocaleHelper.kt     — язык приложения (English / Russian)

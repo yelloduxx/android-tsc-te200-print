@@ -16,6 +16,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.text.InputFilter
+import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -49,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val ACTION_USB_PERMISSION = "com.example.tscprint.USB_PERMISSION"
         private const val REQ_PICK_PDF = 1001
+        private const val REQ_HISTORY = 1002
         private const val STATE_URI = "selected_uri"
         private const val STATE_SHARED = "selected_shared"
         private const val STATE_MODE = "page_selection_mode"
@@ -82,6 +85,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var printButton: MaterialButton
     private lateinit var pageRail: RecyclerView
     private lateinit var copiesField: EditText
+    private lateinit var copyOrderGroup: RadioGroup
 
     private var selectedUri: Uri? = null
     private var prepared: PdfToTspl.Prepared? = null
@@ -98,6 +102,7 @@ class MainActivity : AppCompatActivity() {
     private var queueRunning = false
     private var waitingForQueuePermission = false
     private var currentHistoryTimestamp: Long? = null
+    private var lastPrinterError: String? = null
     private lateinit var pageAdapter: PagePreviewAdapter
 
     private val permissionReceiver = object : BroadcastReceiver() {
@@ -107,7 +112,9 @@ class MainActivity : AppCompatActivity() {
             val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
             val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
             if (!granted) {
+                lastPrinterError = getString(R.string.status_usb_denied)
                 status.text = getString(R.string.status_usb_denied)
+                updatePrinterStatus()
                 return
             }
             if (device != null) {
@@ -291,8 +298,11 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         printerStatus = TextView(this).apply {
-            text = "●"
-            textSize = 18f
+            text = getString(R.string.status_printer_unknown)
+            textSize = 12f
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            maxWidth = dp(150)
             setPadding(dp(4), 0, dp(4), 0)
             contentDescription = getString(R.string.status_printer_unknown)
         }
@@ -300,11 +310,16 @@ class MainActivity : AppCompatActivity() {
             setImageResource(android.R.drawable.ic_menu_recent_history)
             imageTintList = ColorStateList.valueOf(themeColor(MaterialR.attr.colorOnSurface))
             contentDescription = getString(R.string.btn_history)
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+                marginEnd = dp(8)
+            }
             val ta = obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackgroundBorderless))
             val bg = ta.getResourceId(0, 0)
             ta.recycle()
             setBackgroundResource(bg)
-            setOnClickListener { showHistoryDialog() }
+            setOnClickListener {
+                startActivityForResult(Intent(this@MainActivity, HistoryActivity::class.java), REQ_HISTORY)
+            }
         }
         val gear = ImageButton(this).apply {
             setImageResource(R.drawable.ic_settings)
@@ -390,7 +405,56 @@ class MainActivity : AppCompatActivity() {
         pagesButton.visibility = View.GONE
         printCard.addView(pagesButton, matchWrap())
 
-        copiesField = textField(printCard, getString(R.string.label_copies), "1")
+        val copiesRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = matchWrap()
+        }
+        val copiesLayout = TextInputLayout(this).apply {
+            hint = getString(R.string.label_copies)
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            layoutParams = LinearLayout.LayoutParams(dp(92), ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        copiesField = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText("1")
+            setSelectAllOnFocus(true)
+            filters = arrayOf(InputFilter.LengthFilter(3))
+            gravity = android.view.Gravity.CENTER
+        }
+        copiesLayout.addView(copiesField)
+        copiesRow.addView(copiesLayout)
+        val minus = button("−", OUTLINED).apply {
+            contentDescription = getString(R.string.copies_decrease)
+            minWidth = 0
+            setPadding(dp(12), 0, dp(12), 0)
+            layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(8) }
+            setOnClickListener { changeCopies(-1) }
+        }
+        copiesRow.addView(minus)
+        val plus = button("+", OUTLINED).apply {
+            contentDescription = getString(R.string.copies_increase)
+            minWidth = 0
+            setPadding(dp(12), 0, dp(12), 0)
+            layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(6) }
+            setOnClickListener { changeCopies(1) }
+        }
+        copiesRow.addView(plus)
+        printCard.addView(copiesRow)
+
+        copyOrderGroup = RadioGroup(this).apply {
+            orientation = RadioGroup.VERTICAL
+            layoutParams = matchWrap()
+        }
+        copyOrderGroup.addView(MaterialRadioButton(this).apply {
+            id = View.generateViewId()
+            text = getString(R.string.copy_order_collated)
+        })
+        copyOrderGroup.addView(MaterialRadioButton(this).apply {
+            id = View.generateViewId()
+            text = getString(R.string.copy_order_grouped)
+        })
+        printCard.addView(copyOrderGroup)
 
         printButton = button(getString(R.string.btn_print_selected), TONAL)
         printButton.setOnClickListener {
@@ -566,6 +630,7 @@ class MainActivity : AppCompatActivity() {
         gapField.setText(settings.gapMm.toString())
         densityField.setText(settings.density.toString())
         copiesField.setText(settings.copies.toString())
+        copyOrderGroup.check(copyOrderGroup.getChildAt(settings.copyOrder).id)
         thresholdBar.value = settings.threshold.toFloat().coerceIn(0f, 255f)
         thresholdLabel.text = getString(R.string.threshold_format, settings.threshold)
         ditherCheck.isChecked = settings.dither
@@ -579,6 +644,7 @@ class MainActivity : AppCompatActivity() {
         settings.gapMm = gapField.text.toString().toIntOrNull()?.coerceIn(0, 20) ?: 2
         settings.density = densityField.text.toString().toIntOrNull()?.coerceIn(0, 15) ?: 8
         settings.copies = copiesField.text.toString().toIntOrNull()?.coerceIn(1, 999) ?: 1
+        settings.copyOrder = copyOrderGroup.indexOfChild(copyOrderGroup.findViewById(copyOrderGroup.checkedRadioButtonId))
         settings.threshold = thresholdBar.value.toInt()
         settings.dither = ditherCheck.isChecked
         settings.trim = trimCheck.isChecked
@@ -623,6 +689,8 @@ class MainActivity : AppCompatActivity() {
             )
             status.text = getString(R.string.status_preparing_preview)
             ensureDocumentPreview(false)
+        } else if (requestCode == REQ_HISTORY && resultCode == RESULT_OK) {
+            data?.data?.let { openHistoryUri(it) }
         }
     }
 
@@ -739,57 +807,45 @@ class MainActivity : AppCompatActivity() {
         val target = printer.findTargets().firstOrNull()
         val connected = target != null
         val allowed = connected && printer.hasPermission(target!!.device)
-        printerStatus.text = "●"
+        fun show(label: String, color: Int) {
+            printerStatus.text = "● $label"
+            printerStatus.setTextColor(color)
+            printerStatus.contentDescription = label
+        }
         when {
             queueRunning -> {
-                printerStatus.setTextColor(Color.rgb(70, 150, 235))
-                printerStatus.contentDescription = getString(R.string.status_printing)
+                show(getString(R.string.status_printing), Color.rgb(70, 150, 235))
             }
             !connected -> {
-                printerStatus.setTextColor(Color.GRAY)
-                printerStatus.contentDescription = getString(R.string.status_printer_disconnected)
+                show(getString(R.string.status_printer_disconnected), Color.GRAY)
             }
             !allowed -> {
-                printerStatus.setTextColor(Color.rgb(235, 175, 55))
-                printerStatus.contentDescription = getString(R.string.status_printer_permission)
+                show(getString(R.string.status_printer_permission), Color.rgb(235, 175, 55))
+            }
+            lastPrinterError != null -> {
+                show(getString(R.string.status_printer_error), Color.rgb(220, 70, 70))
             }
             else -> {
-                printerStatus.setTextColor(Color.rgb(55, 190, 95))
-                printerStatus.contentDescription = getString(R.string.status_printer_ready)
+                show(getString(R.string.status_printer_ready), Color.rgb(55, 190, 95))
             }
         }
     }
 
-    private fun showHistoryDialog() {
-        val entries = history.list().asReversed()
-        if (entries.isEmpty()) {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.btn_history)
-                .setMessage(R.string.history_empty)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-            return
-        }
-        val labels = entries.map { entry ->
-            val available = historyFileAvailable(entry)
-            val state = if (available) entry.status else getString(R.string.history_unavailable)
-            "${entry.name}\n${entry.pages} стр. × ${entry.copies} — $state"
-        }.toTypedArray()
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.btn_history)
-            .setItems(labels) { _, which -> openHistoryEntry(entries[which]) }
-            .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton(R.string.history_clear) { _, _ -> history.clear() }
-            .show()
+    private fun changeCopies(delta: Int) {
+        val value = copiesCount()
+        copiesField.setText((value + delta).coerceIn(1, 999).toString())
+        persistSettings()
     }
 
     private fun historyFileAvailable(entry: PrintHistory.Entry): Boolean = runCatching {
         contentResolver.openAssetFileDescriptor(Uri.parse(entry.uri), "r")?.use { true } ?: false
     }.getOrDefault(false)
 
-    private fun openHistoryEntry(entry: PrintHistory.Entry) {
-        val uri = Uri.parse(entry.uri)
-        if (!historyFileAvailable(entry)) {
+    private fun openHistoryUri(uri: Uri) {
+        val available = runCatching {
+            contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false
+        }.getOrDefault(false)
+        if (!available) {
             status.text = getString(R.string.history_unavailable)
             return
         }
@@ -797,7 +853,7 @@ class MainActivity : AppCompatActivity() {
         sharePending = false
         prepared = null
         clearPagePreview()
-        fileName.text = getString(R.string.status_selected, entry.name)
+        fileName.text = getString(R.string.status_selected, uri.lastPathSegment ?: "PDF")
         status.text = getString(R.string.status_preparing_preview)
         ensureDocumentPreview(false)
     }
@@ -964,10 +1020,15 @@ class MainActivity : AppCompatActivity() {
     private fun enqueuePrint(jobs: List<ByteArray>, copies: Int) {
         if (jobs.isEmpty()) return
         printQueue.clear()
-        repeat(copies) { printQueue.addAll(jobs) }
+        if (settings.copyOrder == 0) {
+            repeat(copies) { printQueue.addAll(jobs) }
+        } else {
+            jobs.forEach { job -> repeat(copies) { printQueue.add(job) } }
+        }
         queueTotal = printQueue.size
         queueCompleted = 0
         queueRunning = true
+        lastPrinterError = null
         currentHistoryTimestamp = selectedUri?.let { uri ->
             history.add(
                 uri,
@@ -999,6 +1060,8 @@ class MainActivity : AppCompatActivity() {
             updatePrinterStatus()
             updatePageSelectionUi()
             status.text = getString(R.string.status_usb_not_found)
+            lastPrinterError = getString(R.string.status_printer_disconnected)
+            updatePrinterStatus()
             return
         }
         if (!printer.hasPermission(target.device)) {
@@ -1021,6 +1084,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 main.post {
                     queueRunning = false
+                    lastPrinterError = e.message ?: getString(R.string.status_printer_error)
                     updatePrinterStatus()
                     updatePageSelectionUi()
                     currentHistoryTimestamp?.let { history.updateStatus(it, getString(R.string.history_error)) }
@@ -1082,9 +1146,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startSend(bytes: ByteArray) {
+        lastPrinterError = null
+        updatePrinterStatus()
         val target = printer.findTargets().firstOrNull()
         if (target == null) {
+            lastPrinterError = getString(R.string.status_printer_disconnected)
             status.text = getString(R.string.status_usb_not_found)
+            updatePrinterStatus()
             return
         }
         if (!printer.hasPermission(target.device)) {
@@ -1103,6 +1171,8 @@ class MainActivity : AppCompatActivity() {
                 main.post { status.text = getString(R.string.status_sent, sent) }
             } catch (e: Exception) {
                 main.post {
+                    lastPrinterError = e.message ?: getString(R.string.status_printer_error)
+                    updatePrinterStatus()
                     status.text = getString(R.string.status_print_error, e.message ?: "")
                 }
             }

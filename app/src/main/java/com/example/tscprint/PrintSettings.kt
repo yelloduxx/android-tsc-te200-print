@@ -31,6 +31,10 @@ class PrintSettings(context: Context) {
         get() = prefs.getInt(KEY_COPIES, 1)
         set(value) = prefs.edit().putInt(KEY_COPIES, value).apply()
 
+    var copyOrder: Int
+        get() = prefs.getInt(KEY_COPY_ORDER, 0)
+        set(value) = prefs.edit().putInt(KEY_COPY_ORDER, value.coerceIn(0, 1)).apply()
+
     var dither: Boolean
         get() = prefs.getBoolean(KEY_DITHER, false)
         set(value) = prefs.edit().putBoolean(KEY_DITHER, value).apply()
@@ -59,6 +63,7 @@ class PrintSettings(context: Context) {
         private const val KEY_THRESHOLD = "threshold"
         private const val KEY_DENSITY = "density"
         private const val KEY_COPIES = "copies"
+        private const val KEY_COPY_ORDER = "copy_order"
         private const val KEY_DITHER = "dither"
         private const val KEY_COVER = "cover"
         private const val KEY_TRIM = "trim"
