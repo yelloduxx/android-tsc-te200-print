@@ -82,6 +82,8 @@
     <string name="quick_share_usb_denied">USB access denied</string>
     <string name="history_empty">No print jobs yet</string>
     <string name="history_clear">Clear history</string>
+    <string name="history_clear_confirm">Clear? %1$d</string>
+    <string name="history_delete">Delete print job</string>
     <string name="history_unavailable">File unavailable</string>
     <string name="history_queued">Queued</string>
     <string name="history_printed">Printed</string>

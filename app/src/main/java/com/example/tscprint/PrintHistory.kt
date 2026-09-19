@@ -56,12 +56,20 @@ class PrintHistory(context: Context) {
 
     fun clear() = prefs.edit().remove(KEY_ENTRIES).apply()
 
+    fun remove(timestamp: Long) {
+        save(list().filterNot { it.timestamp == timestamp })
+    }
+
     fun updateStatus(timestamp: Long, status: String) {
         val updated = list().map { entry ->
             if (entry.timestamp == timestamp) entry.copy(status = status) else entry
         }
+        save(updated)
+    }
+
+    private fun save(entries: List<Entry>) {
         val json = JSONArray()
-        updated.forEach { item ->
+        entries.forEach { item ->
             json.put(JSONObject().apply {
                 put("uri", item.uri)
                 put("name", item.name)
