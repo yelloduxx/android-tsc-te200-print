@@ -158,7 +158,7 @@ class HistoryActivity : Activity() {
             ).apply { topMargin = dp(10) }
         }
         val delete = ImageButton(this).apply {
-            layoutParams = FrameLayout.LayoutParams(dp(84), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.END)
+            layoutParams = FrameLayout.LayoutParams(dp(88), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.END)
             setImageResource(R.drawable.ic_delete)
             imageTintList = ColorStateList.valueOf(Color.WHITE)
             background = GradientDrawable().apply {
@@ -196,7 +196,8 @@ class HistoryActivity : Activity() {
         var startTranslation = 0f
         var wasRevealed = false
         var swiping = false
-        val revealWidth = dp(84).toFloat()
+        // Keep part of the action under the card so it never opens as a separate rectangle.
+        val revealWidth = dp(64).toFloat()
         card.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
