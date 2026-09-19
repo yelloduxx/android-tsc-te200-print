@@ -11,14 +11,20 @@ multi-page PDFs with barcodes and DataMatrix) straight from your phone — no la
 - **System Print Service**: the `TSC TE200` printer appears in the standard Android
   print dialog (“Share → Print”).
 - **Direct printing from the app**: pick a PDF → preview → print.
-- **“Share → TSC QuickPrint”**: send a PDF from any app and print right away.
+- **“Share → TSC QuickPrint”**: one-page PDFs print immediately; multi-page PDFs open
+  in the preview so you can choose pages before printing.
 - **Multi-page PDFs**: every page is printed as a separate label.
+- **Page preview and selection**: horizontal page previews, checkboxes, all pages
+  selected by default, manual selection, and page ranges.
 - **PDF rendering**: vector, raster and mixed pages are rasterized with `PdfRenderer`.
 - **Fit to label**: “Fit entirely” (contain) or “Fill with crop” (cover), keeping aspect ratio.
 - **Binarization**: hard threshold (barcodes) or Floyd–Steinberg dithering (photos).
 - **Trim white margins** around the image.
 - **Settings**: label size, gap, print density, threshold, scaling mode.
+- **Sensor calibration**: send `GAPDETECT` to the TE200 to calibrate the label gap sensor.
 - **Bilingual UI**: English / Русский, switchable in Settings.
+- **State preservation**: the selected PDF and page selection survive language changes;
+  changing language does not start a new print job.
 - **Material 3 (Material You)**: dynamic colors on Android 12+, light/dark theme.
 
 ## Requirements
@@ -56,7 +62,10 @@ export JAVA_HOME=/path/to/jdk17
 3. Print:
    - **from the app**: “Choose PDF file” → preview → “Print”;
    - **from the system**: in any app “Share → Print → TSC TE200”;
-   - **via sharing**: “Share → TSC QuickPrint”.
+   - **via sharing**: “Share → TSC QuickPrint”; single-page PDFs print immediately,
+     while multi-page PDFs show the page preview first;
+   - **sensor calibration**: in the “Printer access” section, tap “Calibrate label gap
+     sensor” after loading labels. The printer will feed media while measuring the gap.
 4. **Language**: tap the gear icon (top-right) → Settings → choose English / Русский.
 
 ## How it works
@@ -84,6 +93,8 @@ app/src/main/java/com/example/tscprint/
   MainActivity.kt     — UI (Material 3), PDF pick, preview, USB, sharing, language
   TscPrintService.kt  — system print service plugin
   PdfToTspl.kt        — PDF → raster → binarize → TSPL
+  PagePreviewAdapter.kt — horizontal multi-page preview and page checkboxes
+  PageSelection.kt    — page ranges and selected-page state
   UsbPrinter.kt       — USB printer discovery, permission, bulk transfer
   PrintSettings.kt    — settings (SharedPreferences)
   LocaleHelper.kt     — per-app language (English / Russian)
@@ -118,7 +129,13 @@ Android‑приложение и **плагин системной печати
 - **Бинаризация**: жёсткий порог (штрих‑коды) или дизеринг Флойда–Стейнберга (фото).
 - **Подрезка белых полей** вокруг изображения.
 - **Настройки**: размер этикетки, зазор, плотность, порог, режим масштабирования.
+- **Предпросмотр и выбор страниц**: горизонтальная лента страниц, галочки, выбор всех
+  страниц по умолчанию, ручной выбор и диапазоны страниц.
 - **Двуязычный интерфейс**: English / Русский, переключение в настройках.
+- **Калибровка датчика**: команда `GAPDETECT` для автоматического определения длины
+  этикетки и зазора.
+- **Сохранение состояния**: выбранный PDF и страницы сохраняются при смене языка;
+  повторная печать при этом не запускается.
 - **Material 3 (Material You)**: динамические цвета на Android 12+, тёмная/светлая тема.
 
 ## Требования
@@ -156,7 +173,10 @@ export JAVA_HOME=/path/to/jdk17
 3. Печать:
    - **из приложения**: «Выбрать PDF‑файл» → предпросмотр → «Напечатать»;
    - **через систему**: в любом приложении «Поделиться → Печать → TSC TE200»;
-   - **через шаринг**: «Поделиться → TSC QuickPrint».
+   - **через шаринг**: «Поделиться → TSC QuickPrint». Одностраничный PDF печатается
+     сразу, многостраничный сначала открывается в предпросмотре;
+   - **калибровка**: в разделе «Доступ к принтеру» нажмите «Калибровка по датчику
+     зазора». Принтер протянет материал и измерит зазор.
 4. **Язык**: нажмите шестерёнку справа вверху → Настройки → English / Русский.
 
 ## Как это работает
@@ -184,7 +204,9 @@ app/src/main/java/com/example/tscprint/
   MainActivity.kt     — UI (Material 3), выбор PDF, предпросмотр, USB, шаринг, язык
   TscPrintService.kt  — системная служба печати (Print Service plugin)
   PdfToTspl.kt        — PDF → растр → бинаризация → TSPL
-  UsbPrinter.kt       — поиск USB‑принтера, разрешение, bulk‑передача
+  PagePreviewAdapter.kt — горизонтальный предпросмотр и галочки страниц
+  PageSelection.kt    — диапазоны и состояние выбранных страниц
+  UsbPrinter.kt       — поиск USB-принтера, разрешение, bulk-передача
   PrintSettings.kt    — настройки (SharedPreferences)
   LocaleHelper.kt     — язык приложения (English / Russian)
   App.kt              — применение динамических цветов Material You

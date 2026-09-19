@@ -6,11 +6,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 
 object PdfToTspl {
 
@@ -36,12 +38,13 @@ object PdfToTspl {
         threshold: Int,
         gapMm: Int = 2,
         density: Int = 8,
-        trim: Boolean = true
+        trim: Boolean = true,
+        selectedPages: Set<Int>? = null
     ): Prepared {
         val pfd = context.contentResolver.openFileDescriptor(uri, "r")
             ?: throw IllegalStateException("Could not open file")
         return pfd.use {
-            prepare(it, widthMm, heightMm, cover, dither, threshold, gapMm, density, trim)
+            prepare(it, widthMm, heightMm, cover, dither, threshold, gapMm, density, trim, selectedPages)
         }
     }
 
@@ -54,7 +57,8 @@ object PdfToTspl {
         threshold: Int,
         gapMm: Int = 2,
         density: Int = 8,
-        trim: Boolean = true
+        trim: Boolean = true,
+        selectedPages: Set<Int>? = null
     ): Prepared {
         val targetW = Math.round(widthMm * DOTS_PER_MM.toFloat())
         val targetH = Math.round(heightMm * DOTS_PER_MM.toFloat())
@@ -62,9 +66,14 @@ object PdfToTspl {
         val renderer = PdfRenderer(pfd)
         renderer.use { r ->
             if (r.pageCount < 1) throw IllegalStateException("PDF has no pages")
+            val pages = selectedPages ?: (0 until r.pageCount).toSet()
+            if (pages.none { it in 0 until r.pageCount }) {
+                throw IllegalStateException("No pages selected")
+            }
             val output = ByteArrayOutputStream()
             var preview: Bitmap? = null
             for (index in 0 until r.pageCount) {
+                if (index !in pages) continue
                 val page = r.openPage(index)
                 page.use { p ->
                     val renderW = Math.ceil(p.width / 72.0 * DPI)
@@ -108,6 +117,50 @@ object PdfToTspl {
                 targetH,
                 r.pageCount
             )
+        }
+    }
+
+    fun renderThumbnails(
+        context: Context,
+        uri: Uri,
+        maxWidth: Int = 180,
+        maxHeight: Int = 240
+    ): List<Bitmap> {
+        val pfd = context.contentResolver.openFileDescriptor(uri, "r")
+            ?: throw IllegalStateException("Could not open file")
+        return pfd.use { renderThumbnails(it, maxWidth, maxHeight) }
+    }
+
+    fun renderThumbnails(
+        pfd: ParcelFileDescriptor,
+        maxWidth: Int = 180,
+        maxHeight: Int = 240
+    ): List<Bitmap> {
+        val renderer = PdfRenderer(pfd)
+        renderer.use { r ->
+            if (r.pageCount < 1) throw IllegalStateException("PDF has no pages")
+            return (0 until r.pageCount).map { index ->
+                val page = r.openPage(index)
+                page.use { p ->
+                    val scale = minOf(
+                        maxWidth.toFloat() / p.width,
+                        maxHeight.toFloat() / p.height
+                    )
+                    val width = (p.width * scale).roundToInt().coerceAtLeast(1)
+                    val height = (p.height * scale).roundToInt().coerceAtLeast(1)
+                    val bitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888)
+                    bitmap.eraseColor(Color.WHITE)
+                    val left = (maxWidth - width) / 2
+                    val top = (maxHeight - height) / 2
+                    p.render(
+                        bitmap,
+                        Rect(left, top, left + width, top + height),
+                        null,
+                        PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
+                    )
+                    bitmap
+                }
+            }
         }
     }
 

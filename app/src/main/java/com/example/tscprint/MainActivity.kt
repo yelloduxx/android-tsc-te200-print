@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
@@ -30,6 +31,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.R as MaterialR
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -46,6 +49,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val ACTION_USB_PERMISSION = "com.example.tscprint.USB_PERMISSION"
         private const val REQ_PICK_PDF = 1001
+        private const val STATE_URI = "selected_uri"
+        private const val STATE_SHARED = "selected_shared"
+        private const val STATE_MODE = "page_selection_mode"
+        private const val STATE_PAGES = "page_selection_pages"
         private const val FILLED = 0
         private const val TONAL = 1
         private const val OUTLINED = 2
@@ -69,10 +76,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var containRadio: RadioButton
     private lateinit var ditherCheck: CheckBox
     private lateinit var trimCheck: CheckBox
+    private lateinit var pagesSummary: TextView
+    private lateinit var pagesButton: MaterialButton
+    private lateinit var printButton: MaterialButton
+    private lateinit var pageRail: RecyclerView
 
     private var selectedUri: Uri? = null
     private var prepared: PdfToTspl.Prepared? = null
     private var pendingBytes: ByteArray? = null
+    private var pageThumbnails: List<Bitmap> = emptyList()
+    private val pageSelection = PageSelection()
+    private var sharePending = false
+    private var pendingRestoreMode: String? = null
+    private var pendingRestorePages: IntArray? = null
+    private lateinit var pageAdapter: PagePreviewAdapter
 
     private val permissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -113,6 +130,8 @@ class MainActivity : AppCompatActivity() {
         registerPermissionReceiver()
         if (savedInstanceState == null) {
             handleShareIntent(intent)
+        } else {
+            restoreDocumentState(savedInstanceState)
         }
     }
 
@@ -128,6 +147,29 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         runCatching { unregisterReceiver(permissionReceiver) }
         io.shutdown()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        selectedUri?.let { outState.putString(STATE_URI, it.toString()) }
+        outState.putBoolean(STATE_SHARED, sharePending)
+        outState.putString(STATE_MODE, pageSelection.mode.name)
+        outState.putIntArray(STATE_PAGES, pageSelection.selectedPages().toIntArray())
+    }
+
+    private fun restoreDocumentState(state: Bundle) {
+        val uri = state.getString(STATE_URI)?.let(Uri::parse) ?: return
+        selectedUri = uri
+        sharePending = false
+        pendingRestoreMode = state.getString(STATE_MODE)
+        pendingRestorePages = state.getIntArray(STATE_PAGES)
+        val shared = state.getBoolean(STATE_SHARED, false)
+        fileName.text = getString(
+            if (shared) R.string.status_shared else R.string.status_selected,
+            uri.lastPathSegment ?: "PDF"
+        )
+        status.text = getString(R.string.status_preparing_preview)
+        ensureDocumentPreview(false)
     }
 
     private fun setupEdgeToEdge() {
@@ -258,9 +300,35 @@ class MainActivity : AppCompatActivity() {
             bottomMargin = dp(10)
         })
 
-        val printBtn = button(getString(R.string.btn_print), TONAL)
-        printBtn.setOnClickListener { startSendPrepared() }
-        printCard.addView(printBtn, matchWrap())
+        pagesSummary = TextView(this).apply {
+            text = getString(R.string.pages_summary_empty)
+            setTextAppearance(MaterialR.style.TextAppearance_Material3_BodyMedium)
+            setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
+            setPadding(0, dp(4), 0, 0)
+        }
+        printCard.addView(pagesSummary)
+
+        pageAdapter = PagePreviewAdapter { index -> togglePage(index) }
+        pageRail = RecyclerView(this).apply {
+            layoutManager = LinearLayoutManager(this@MainActivity, RecyclerView.HORIZONTAL, false)
+            adapter = pageAdapter
+            clipToPadding = false
+            setPadding(dp(2), dp(10), dp(2), dp(4))
+            visibility = View.GONE
+        }
+        printCard.addView(pageRail, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(224)
+        ))
+
+        pagesButton = button(getString(R.string.btn_page_selection), OUTLINED)
+        pagesButton.setOnClickListener { showPageSelectionDialog() }
+        pagesButton.visibility = View.GONE
+        printCard.addView(pagesButton, matchWrap())
+
+        printButton = button(getString(R.string.btn_print_selected), TONAL)
+        printButton.setOnClickListener { startSendPrepared() }
+        printButton.visibility = View.GONE
+        printCard.addView(printButton, matchWrap())
 
         val testBtn = button(getString(R.string.btn_test_print), OUTLINED)
         testBtn.setOnClickListener { testPrint() }
@@ -323,6 +391,10 @@ class MainActivity : AppCompatActivity() {
         val authorize = button(getString(R.string.btn_allow_usb), TONAL)
         authorize.setOnClickListener { authorizeUsb() }
         accessCard.addView(authorize, matchWrap())
+
+        val calibrate = button(getString(R.string.btn_calibrate), OUTLINED)
+        calibrate.setOnClickListener { calibratePrinter() }
+        accessCard.addView(calibrate, matchWrap())
 
         status = TextView(this).apply {
             text = getString(R.string.status_daily_hint)
@@ -440,6 +512,7 @@ class MainActivity : AppCompatActivity() {
         settings.dither = ditherCheck.isChecked
         settings.trim = trimCheck.isChecked
         settings.cover = coverRadio.isChecked
+        prepared = null
         loadSettings()
         status.text = getString(R.string.status_saved, settings.widthMm, settings.heightMm)
     }
@@ -459,12 +532,15 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == REQ_PICK_PDF && resultCode == RESULT_OK) {
             selectedUri = data?.data
             prepared = null
-            preview.setImageDrawable(null)
+            sharePending = false
+            pendingRestoreMode = null
+            pendingRestorePages = null
+            clearPagePreview()
             fileName.text = getString(
                 R.string.status_selected, selectedUri?.lastPathSegment ?: "PDF"
             )
             status.text = getString(R.string.status_preparing_preview)
-            ensurePrepared { }
+            ensureDocumentPreview(false)
         }
     }
 
@@ -484,13 +560,170 @@ class MainActivity : AppCompatActivity() {
         val uri = sharedUri(intent) ?: return
         selectedUri = uri
         prepared = null
-        preview.setImageDrawable(null)
+        sharePending = true
+        pendingRestoreMode = null
+        pendingRestorePages = null
+        clearPagePreview()
         fileName.text = getString(R.string.status_shared, uri.lastPathSegment ?: "PDF")
-        status.text = getString(R.string.status_preparing_print)
-        ensurePrepared { result ->
-            pendingBytes = result.tspl
-            startSend(result.tspl)
+        status.text = getString(R.string.status_preparing_preview)
+        ensureDocumentPreview(true)
+    }
+
+    private fun clearPagePreview() {
+        pageAdapter.submit(emptyList())
+        pageThumbnails.forEach { if (!it.isRecycled) it.recycle() }
+        pageThumbnails = emptyList()
+        pageSelection.reset(0)
+        pageRail.visibility = View.GONE
+        pagesButton.visibility = View.GONE
+        printButton.visibility = View.GONE
+        pagesSummary.text = getString(R.string.pages_summary_empty)
+    }
+
+    private fun ensureDocumentPreview(autoPrintSinglePage: Boolean) {
+        val uri = selectedUri ?: return
+        status.text = getString(R.string.status_preparing_preview)
+        io.execute {
+            try {
+                val thumbnails = PdfToTspl.renderThumbnails(this, uri)
+                main.post {
+                    pageThumbnails = thumbnails
+                    val restored = pendingRestorePages?.let { pages ->
+                        pageSelection.restore(thumbnails.size, pendingRestoreMode, pages)
+                    } ?: false
+                    if (!restored) pageSelection.reset(thumbnails.size)
+                    pendingRestoreMode = null
+                    pendingRestorePages = null
+                    pageAdapter.submit(thumbnails.mapIndexed { index, bitmap ->
+                        PagePreviewAdapter.Item(index, bitmap, pageSelection.isSelected(index))
+                    })
+                    preview.setImageBitmap(thumbnails.firstOrNull())
+                    pageRail.visibility = if (thumbnails.isEmpty()) View.GONE else View.VISIBLE
+                    pagesButton.visibility = if (thumbnails.isEmpty()) View.GONE else View.VISIBLE
+                    printButton.visibility = if (thumbnails.isEmpty()) View.GONE else View.VISIBLE
+                    updatePageSelectionUi()
+                    status.text = getString(R.string.status_ready_preview, thumbnails.size)
+
+                    if (autoPrintSinglePage && thumbnails.size == 1) {
+                        ensurePrepared { result ->
+                            pendingBytes = result.tspl
+                            startSend(result.tspl)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                main.post { status.text = getString(R.string.status_error, e.message ?: "") }
+            }
         }
+    }
+
+    private fun togglePage(index: Int) {
+        pageSelection.toggle(index)
+        prepared = null
+        pageThumbnails.getOrNull(index)?.let { preview.setImageBitmap(it) }
+        refreshPageAdapter()
+        updatePageSelectionUi()
+    }
+
+    private fun refreshPageAdapter() {
+        pageAdapter.submit(pageThumbnails.mapIndexed { index, bitmap ->
+            PagePreviewAdapter.Item(index, bitmap, pageSelection.isSelected(index))
+        })
+    }
+
+    private fun updatePageSelectionUi() {
+        val selected = pageSelection.count()
+        val total = pageSelection.total()
+        pagesSummary.text = if (total == 0) {
+            getString(R.string.pages_summary_empty)
+        } else {
+            getString(R.string.pages_summary, selected, total)
+        }
+        pagesButton.text = when (pageSelection.mode) {
+            PageSelection.Mode.ALL -> getString(R.string.pages_all)
+            PageSelection.Mode.RANGE -> getString(R.string.pages_range, pageSelection.expression())
+            PageSelection.Mode.MANUAL -> getString(R.string.pages_manual)
+        }
+        printButton.text = getString(R.string.btn_print_selected, selected)
+        printButton.isEnabled = selected > 0
+    }
+
+    private fun showPageSelectionDialog() {
+        val total = pageSelection.total()
+        if (total == 0) return
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), 0, dp(24), 0)
+        }
+        val all = MaterialRadioButton(this).apply { text = getString(R.string.pages_all) }
+        val range = MaterialRadioButton(this).apply { text = getString(R.string.pages_range_option) }
+        val manual = MaterialRadioButton(this).apply { text = getString(R.string.pages_manual) }
+        val rangeLayout = TextInputLayout(this).apply {
+            hint = getString(R.string.pages_range_hint)
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            visibility = View.GONE
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+        }
+        val rangeField = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            setText(if (pageSelection.mode == PageSelection.Mode.RANGE) {
+                pageSelection.expression()
+            } else "1-$total")
+        }
+        rangeLayout.addView(rangeField)
+        column.addView(all)
+        column.addView(range)
+        column.addView(manual)
+        column.addView(rangeLayout)
+
+        when (pageSelection.mode) {
+            PageSelection.Mode.ALL -> all.isChecked = true
+            PageSelection.Mode.RANGE -> range.isChecked = true
+            PageSelection.Mode.MANUAL -> manual.isChecked = true
+        }
+        fun select(button: MaterialRadioButton) {
+            all.isChecked = button === all
+            range.isChecked = button === range
+            manual.isChecked = button === manual
+            rangeLayout.visibility = if (button === range) View.VISIBLE else View.GONE
+        }
+        all.setOnClickListener { select(all) }
+        range.setOnClickListener { select(range) }
+        manual.setOnClickListener { select(manual) }
+        select(when {
+            all.isChecked -> all
+            range.isChecked -> range
+            else -> manual
+        })
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.pages_dialog_title)
+            .setView(column)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.apply, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                when {
+                    all.isChecked -> pageSelection.selectAll()
+                    range.isChecked -> {
+                        val result = pageSelection.applyRange(rangeField.text?.toString().orEmpty())
+                        if (result.isFailure) {
+                            rangeLayout.error = getString(R.string.pages_range_error, total)
+                            return@setOnClickListener
+                        }
+                    }
+                    manual.isChecked -> Unit
+                }
+                prepared = null
+                refreshPageAdapter()
+                updatePageSelectionUi()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
     }
 
     private fun labelSize(): Pair<Int, Int> {
@@ -510,6 +743,11 @@ class MainActivity : AppCompatActivity() {
             toast(getString(R.string.toast_pick_first))
             return
         }
+        val selected = pageSelection.selectedPages()
+        if (selected.isEmpty()) {
+            status.text = getString(R.string.pages_none_selected)
+            return
+        }
         val (w, h) = labelSize()
         val gap = gapField.text.toString().toIntOrNull()?.coerceIn(0, 20) ?: 2
         val density = densityField.text.toString().toIntOrNull()?.coerceIn(0, 15) ?: 8
@@ -521,7 +759,7 @@ class MainActivity : AppCompatActivity() {
         io.execute {
             try {
                 val result = PdfToTspl.prepare(
-                    this, uri, w, h, cover, dither, threshold, gap, density, trim
+                    this, uri, w, h, cover, dither, threshold, gap, density, trim, selected
                 )
                 main.post {
                     prepared = result
@@ -560,6 +798,13 @@ class MainActivity : AppCompatActivity() {
             ).toByteArray(Charsets.US_ASCII)
         pendingBytes = tspl
         startSend(tspl)
+    }
+
+    private fun calibratePrinter() {
+        val command = "GAPDETECT\r\n".toByteArray(Charsets.US_ASCII)
+        pendingBytes = command
+        status.text = getString(R.string.status_calibrating)
+        startSend(command)
     }
 
     private fun authorizeUsb() {

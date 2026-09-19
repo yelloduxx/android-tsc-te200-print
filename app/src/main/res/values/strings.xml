@@ -12,9 +12,12 @@
 
     <string name="btn_pick_pdf">Choose PDF file</string>
     <string name="btn_print">Print</string>
+    <string name="btn_print_selected">Print selected (%1$d)</string>
+    <string name="btn_page_selection">Pages to print</string>
     <string name="btn_test_print">Test print (text &amp; barcode)</string>
     <string name="btn_save">Save settings</string>
     <string name="btn_allow_usb">Allow USB</string>
+    <string name="btn_calibrate">Calibrate label gap sensor</string>
 
     <string name="hint_mm">Sizes in millimeters, as in the printer driver.</string>
     <string name="hint_scale">Scaling to label:</string>
@@ -38,6 +41,7 @@
     <string name="status_preparing_print">Preparing to print…</string>
     <string name="status_processing">Processing PDF…</string>
     <string name="status_ready">Ready: %1$d page(s), %2$d×%3$d dots</string>
+    <string name="status_ready_preview">Preview ready: %1$d page(s)</string>
     <string name="status_error">Error: %1$s</string>
     <string name="status_saved">Settings saved: %1$d×%2$d mm</string>
     <string name="status_usb_not_found">USB device not found. Connect the TE200 via OTG.</string>
@@ -48,9 +52,21 @@
     <string name="status_print_error">Print error: %1$s</string>
     <string name="status_usb_denied">USB access denied</string>
     <string name="status_usb_granted">USB allowed: %1$s</string>
+    <string name="status_calibrating">Calibrating printer sensor…</string>
     <string name="status_printer_not_found">Printer not found</string>
     <string name="toast_pick_first">First choose a PDF with “Choose PDF file”</string>
     <string name="status_daily_hint">Daily printing: “Share → Print → TSC TE200”.</string>
+    <string name="pages_summary_empty">No PDF pages loaded</string>
+    <string name="pages_summary">Selected: %1$d of %2$d page(s)</string>
+    <string name="pages_all">All pages</string>
+    <string name="pages_range">Pages: %1$s</string>
+    <string name="pages_range_option">Page range</string>
+    <string name="pages_manual">Manual selection</string>
+    <string name="pages_range_hint">For example: 1–3, 5, 8–10</string>
+    <string name="pages_range_error">Enter pages from 1 to %1$d</string>
+    <string name="pages_dialog_title">Pages to print</string>
+    <string name="pages_none_selected">Select at least one page</string>
+    <string name="apply">Apply</string>
 
     <string name="service_print_failed">Print failed</string>
     <string name="service_printer_not_connected">TSC printer is not connected via USB</string>

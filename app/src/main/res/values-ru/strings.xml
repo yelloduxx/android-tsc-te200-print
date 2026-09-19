@@ -12,9 +12,12 @@
 
     <string name="btn_pick_pdf">Выбрать PDF-файл</string>
     <string name="btn_print">Напечатать</string>
+    <string name="btn_print_selected">Печатать выбранные (%1$d)</string>
+    <string name="btn_page_selection">Страницы печати</string>
     <string name="btn_test_print">Тестовая печать (текст и штрих-код)</string>
     <string name="btn_save">Сохранить настройки</string>
     <string name="btn_allow_usb">Разрешить USB</string>
+    <string name="btn_calibrate">Калибровка по датчику зазора</string>
 
     <string name="hint_mm">Размеры в миллиметрах, как в драйвере принтера.</string>
     <string name="hint_scale">Масштабирование под этикетку:</string>
@@ -38,6 +41,7 @@
     <string name="status_preparing_print">Подготовка к печати…</string>
     <string name="status_processing">Обработка PDF…</string>
     <string name="status_ready">Готово: %1$d стр., %2$d×%3$d точек</string>
+    <string name="status_ready_preview">Предпросмотр готов: %1$d стр.</string>
     <string name="status_error">Ошибка: %1$s</string>
     <string name="status_saved">Настройки сохранены: %1$d×%2$d мм</string>
     <string name="status_usb_not_found">USB-устройство не найдено. Подключите TE200 через OTG.</string>
@@ -48,9 +52,21 @@
     <string name="status_print_error">Ошибка печати: %1$s</string>
     <string name="status_usb_denied">Доступ к USB отклонён</string>
     <string name="status_usb_granted">USB разрешён: %1$s</string>
+    <string name="status_calibrating">Калибровка принтера по датчику…</string>
     <string name="status_printer_not_found">Принтер не найден</string>
     <string name="toast_pick_first">Сначала выберите PDF-файл кнопкой «Выбрать PDF-файл»</string>
     <string name="status_daily_hint">Ежедневная печать: «Поделиться → Печать → TSC TE200».</string>
+    <string name="pages_summary_empty">Страницы PDF не загружены</string>
+    <string name="pages_summary">Выбрано: %1$d из %2$d стр.</string>
+    <string name="pages_all">Все страницы</string>
+    <string name="pages_range">Страницы: %1$s</string>
+    <string name="pages_range_option">Диапазон страниц</string>
+    <string name="pages_manual">Выбор вручную</string>
+    <string name="pages_range_hint">Например: 1–3, 5, 8–10</string>
+    <string name="pages_range_error">Введите страницы от 1 до %1$d</string>
+    <string name="pages_dialog_title">Страницы печати</string>
+    <string name="pages_none_selected">Выберите хотя бы одну страницу</string>
+    <string name="apply">Применить</string>
 
     <string name="service_print_failed">Ошибка печати</string>
     <string name="service_printer_not_connected">Принтер TSC не подключён по USB</string>
