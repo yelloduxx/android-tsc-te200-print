@@ -13,6 +13,7 @@
     <string name="btn_pick_pdf">Выбрать PDF-файл</string>
     <string name="btn_print">Напечатать</string>
     <string name="btn_print_selected">Печатать выбранные (%1$d)</string>
+    <string name="btn_print_short">Печать</string>
     <string name="btn_page_selection">Страницы печати</string>
     <string name="btn_test_print">Тестовая печать (текст и штрих-код)</string>
     <string name="btn_save">Сохранить настройки</string>

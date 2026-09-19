@@ -13,6 +13,7 @@
     <string name="btn_pick_pdf">Choose PDF file</string>
     <string name="btn_print">Print</string>
     <string name="btn_print_selected">Print selected (%1$d)</string>
+    <string name="btn_print_short">Print</string>
     <string name="btn_page_selection">Pages to print</string>
     <string name="btn_test_print">Test print (text &amp; barcode)</string>
     <string name="btn_save">Save settings</string>

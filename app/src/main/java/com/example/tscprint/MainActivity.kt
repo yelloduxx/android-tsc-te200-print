@@ -17,6 +17,8 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.text.InputFilter
+import android.text.TextWatcher
+import android.text.Editable
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
@@ -352,7 +354,22 @@ class MainActivity : AppCompatActivity() {
         val printCard = newCard(content, getString(R.string.section_print))
         val pick = button(getString(R.string.btn_pick_pdf), FILLED)
         pick.setOnClickListener { pickPdf() }
-        printCard.addView(pick, matchWrap())
+        val fileActions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = matchWrap()
+        }
+        fileActions.addView(pick, LinearLayout.LayoutParams(0, dp(52), 1f))
+
+        printButton = button(getString(R.string.btn_print_short), TONAL)
+        printButton.setOnClickListener {
+            if (queueRunning) stopPrintQueue() else startSendPrepared()
+        }
+        printButton.visibility = View.GONE
+        fileActions.addView(printButton, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+            marginStart = dp(8)
+        })
+        printCard.addView(fileActions)
 
         fileName = TextView(this).apply {
             text = getString(R.string.status_no_file)
@@ -455,14 +472,15 @@ class MainActivity : AppCompatActivity() {
             id = View.generateViewId()
             text = getString(R.string.copy_order_grouped)
         })
+        copyOrderGroup.visibility = View.GONE
         printCard.addView(copyOrderGroup)
-
-        printButton = button(getString(R.string.btn_print_selected), TONAL)
-        printButton.setOnClickListener {
-            if (queueRunning) stopPrintQueue() else startSendPrepared()
-        }
-        printButton.visibility = View.GONE
-        printCard.addView(printButton, matchWrap())
+        copiesField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateCopyOrderVisibility()
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
 
         val labelCard = newCard(content, getString(R.string.section_label))
         labelCard.addView(hint(getString(R.string.hint_mm)))
@@ -814,9 +832,14 @@ class MainActivity : AppCompatActivity() {
         printButton.text = if (queueRunning) {
             getString(R.string.btn_stop_print)
         } else {
-            getString(R.string.btn_print_selected, selected)
+            getString(R.string.btn_print_short)
         }
         printButton.isEnabled = queueRunning || selected > 0
+    }
+
+    private fun updateCopyOrderVisibility() {
+        if (!::copyOrderGroup.isInitialized) return
+        copyOrderGroup.visibility = if (copiesCount() > 1) View.VISIBLE else View.GONE
     }
 
     private fun updatePrinterStatus() {
