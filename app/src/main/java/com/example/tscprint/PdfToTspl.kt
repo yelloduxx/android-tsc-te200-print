@@ -151,7 +151,9 @@ object PdfToTspl {
                     )
                     val width = (p.width * scale).roundToInt().coerceAtLeast(1)
                     val height = (p.height * scale).roundToInt().coerceAtLeast(1)
-                    val bitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.RGB_565)
+                    // PdfRenderer supports ARGB_8888 as its destination bitmap format.
+                    // RGB_565 causes "unsupported pixel format" on Android devices.
+                    val bitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888)
                     bitmap.eraseColor(Color.WHITE)
                     val left = (maxWidth - width) / 2
                     val top = (maxHeight - height) / 2
