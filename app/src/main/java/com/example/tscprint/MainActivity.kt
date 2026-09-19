@@ -169,6 +169,11 @@ class MainActivity : AppCompatActivity() {
         io.shutdown()
     }
 
+    override fun onPause() {
+        if (::widthField.isInitialized) persistSettings()
+        super.onPause()
+    }
+
     private val usbStatusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == UsbManager.ACTION_USB_DEVICE_ATTACHED ||
