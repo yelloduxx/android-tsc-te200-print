@@ -5,9 +5,11 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Build
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -39,6 +41,22 @@ class QuickShareSettingsActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
             setBackgroundColor(themeColor(MaterialR.attr.colorSurface))
+        }
+        root.setOnApplyWindowInsetsListener { _, insets ->
+            val top: Int
+            val bottom: Int
+            if (Build.VERSION.SDK_INT >= 30) {
+                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                top = bars.top
+                bottom = bars.bottom
+            } else {
+                @Suppress("DEPRECATION")
+                top = insets.systemWindowInsetTop
+                @Suppress("DEPRECATION")
+                bottom = insets.systemWindowInsetBottom
+            }
+            root.setPadding(dp(16), top + dp(8), dp(16), dp(16) + bottom)
+            insets
         }
         root.addView(TextView(this).apply {
             text = getString(R.string.quick_share_settings)
