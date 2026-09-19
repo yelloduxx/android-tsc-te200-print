@@ -10,8 +10,10 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Gravity
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -150,7 +152,25 @@ class QuickShareSettingsActivity : Activity() {
             return
         }
         apps.forEach { app ->
-            appsContainer.addView(MaterialCheckBox(this).apply {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(4), 0, dp(4))
+            }
+            row.addView(ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
+                    marginEnd = dp(8)
+                }
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setImageDrawable(runCatching {
+                    packageManager.getApplicationIcon(app.packageName)
+                }.getOrElse {
+                    getDrawable(android.R.drawable.sym_def_app_icon)
+                })
+                contentDescription = app.label
+            })
+            row.addView(MaterialCheckBox(this).apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 text = "${app.label}\n${app.packageName}"
                 isChecked = app.packageName in allowed
                 setOnCheckedChangeListener { _, checked ->
@@ -159,6 +179,7 @@ class QuickShareSettingsActivity : Activity() {
                 }
                 contentDescription = app.packageName
             })
+            appsContainer.addView(row)
         }
     }
 
