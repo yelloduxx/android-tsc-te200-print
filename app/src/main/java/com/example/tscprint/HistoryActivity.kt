@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -15,6 +16,8 @@ import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -154,13 +157,14 @@ class HistoryActivity : Activity() {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(10) }
         }
-        val delete = MaterialButton(this).apply {
+        val delete = ImageButton(this).apply {
             layoutParams = FrameLayout.LayoutParams(dp(84), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.END)
-            icon = getDrawable(android.R.drawable.ic_menu_delete)
-            iconTint = ColorStateList.valueOf(themeColor(MaterialR.attr.colorOnError))
-            text = ""
+            setImageResource(android.R.drawable.ic_menu_delete)
+            imageTintList = ColorStateList.valueOf(Color.WHITE)
+            background = ColorDrawable(Color.rgb(211, 47, 47))
+            scaleType = ImageView.ScaleType.CENTER
+            setPadding(0, 0, 0, 0)
             contentDescription = getString(R.string.history_delete)
-            backgroundTintList = ColorStateList.valueOf(themeColor(MaterialR.attr.colorError))
             setOnClickListener {
                 history.remove(entry.timestamp)
                 recreate()
@@ -184,27 +188,31 @@ class HistoryActivity : Activity() {
             }
         }
         var downX = 0f
+        var startTranslation = 0f
+        var wasRevealed = false
         var swiping = false
         val revealWidth = dp(84).toFloat()
         card.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = event.rawX
+                    startTranslation = view.translationX
+                    wasRevealed = startTranslation < -1f
                     swiping = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val delta = event.rawX - downX
-                    if (!swiping && delta < -dp(8)) swiping = true
+                    if (!swiping && kotlin.math.abs(delta) > dp(8)) swiping = true
                     if (swiping) {
-                        view.translationX = delta.coerceIn(-revealWidth, 0f)
+                        view.translationX = (startTranslation + delta).coerceIn(-revealWidth, 0f)
                         true
                     } else {
                         true
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (swiping) {
+                    if (swiping || wasRevealed) {
                         val target = if (view.translationX <= -revealWidth / 2) -revealWidth else 0f
                         view.animate().translationX(target).setDuration(160).start()
                     } else if (event.actionMasked == MotionEvent.ACTION_UP) {
