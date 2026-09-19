@@ -334,7 +334,9 @@ class MainActivity : AppCompatActivity() {
             val bg = ta.getResourceId(0, 0)
             ta.recycle()
             setBackgroundResource(bg)
-            setOnClickListener { showSettingsDialog() }
+            setOnClickListener {
+                startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+            }
         }
         headerRow.addView(header)
         headerRow.addView(printerStatus)
@@ -536,12 +538,6 @@ class MainActivity : AppCompatActivity() {
         content.addView(save, matchWrap())
 
         val accessCard = newCard(content, getString(R.string.section_access))
-        val quickShare = button(getString(R.string.btn_quick_share), OUTLINED)
-        quickShare.setOnClickListener {
-            startActivity(Intent(this, QuickShareSettingsActivity::class.java))
-        }
-        accessCard.addView(quickShare, matchWrap())
-
         val authorize = button(getString(R.string.btn_allow_usb), TONAL)
         authorize.setOnClickListener { authorizeUsb() }
         accessCard.addView(authorize, matchWrap())

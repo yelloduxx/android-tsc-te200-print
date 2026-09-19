@@ -2,8 +2,11 @@ package com.example.tscprint
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -12,10 +15,14 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.R as MaterialR
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class QuickShareSettingsActivity : Activity() {
 
     private val quickShare by lazy { QuickShareSettings(this) }
+    private lateinit var appsContainer: LinearLayout
+    private lateinit var searchField: TextInputEditText
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,34 +56,41 @@ class QuickShareSettingsActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> quickShare.enabled = checked }
         })
 
-        val scrollContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val apps = availableApps()
-        if (apps.isEmpty()) {
-            scrollContent.addView(TextView(this).apply {
-                text = getString(R.string.quick_share_no_apps)
-                setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
-                setPadding(0, dp(20), 0, dp(20))
-            })
-        } else {
-            scrollContent.addView(TextView(this).apply {
-                text = getString(R.string.quick_share_choose_apps)
-                setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
-                setPadding(0, dp(16), 0, dp(4))
-            })
-            apps.forEach { app ->
-                scrollContent.addView(MaterialCheckBox(this).apply {
-                    text = "${app.label}\n${app.packageName}"
-                    isChecked = app.packageName in quickShare.allowedPackages()
-                    setOnCheckedChangeListener { _, checked ->
-                        quickShare.setAllowed(app.packageName, checked)
-                    }
-                    contentDescription = app.packageName
-                })
-            }
+        root.addView(TextView(this).apply {
+            text = getString(R.string.quick_share_choose_apps)
+            setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
+            setPadding(0, dp(16), 0, dp(4))
+        })
+        val searchLayout = TextInputLayout(this).apply {
+            hint = getString(R.string.quick_share_search)
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+        }
+        searchField = TextInputEditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            setSingleLine(true)
+        }
+        searchLayout.addView(searchField)
+        root.addView(searchLayout)
+
+        appsContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scrollContent = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(appsContainer)
         }
         root.addView(ScrollView(this).apply { addView(scrollContent) }, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
         ))
+        searchField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                renderApps(s?.toString().orEmpty())
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        renderApps("")
         root.addView(MaterialButton(this).apply {
             text = getString(R.string.close)
             setOnClickListener { finish() }
@@ -88,25 +102,48 @@ class QuickShareSettingsActivity : Activity() {
 
     private data class AppEntry(val packageName: String, val label: String)
 
-    private fun availableApps(): List<AppEntry> {
-        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val entries = packageManager.queryIntentActivities(launcherIntent, 0)
-            .mapNotNull { info ->
-                val packageName = info.activityInfo?.packageName ?: return@mapNotNull null
-                if (packageName == packageName()) return@mapNotNull null
-                AppEntry(packageName, info.loadLabel(packageManager).toString())
-            }
-            .distinctBy { it.packageName }
-            .toMutableList()
-
-        // Keep previously discovered/selected packages visible even if their launcher
-        // activity is not exposed by the current device's package-visibility rules.
-        (quickShare.candidates() + quickShare.allowedPackages()).forEach { packageName ->
-            if (packageName != packageName() && entries.none { it.packageName == packageName }) {
-                entries += AppEntry(packageName, applicationLabel(packageName))
-            }
+    private fun renderApps(query: String) {
+        if (!::appsContainer.isInitialized) return
+        appsContainer.removeAllViews()
+        val normalized = query.trim().lowercase()
+        val allowed = quickShare.allowedPackages()
+        val apps = availableApps()
+            .filter { normalized.isEmpty() ||
+                it.label.lowercase().contains(normalized) || it.packageName.contains(normalized) }
+            .sortedWith(compareByDescending<AppEntry> { it.packageName in allowed }
+                .thenBy { it.label.lowercase() })
+        if (apps.isEmpty()) {
+            appsContainer.addView(TextView(this).apply {
+                text = getString(R.string.quick_share_no_apps)
+                setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
+                setPadding(0, dp(20), 0, dp(20))
+            })
+            return
         }
-        return entries.sortedBy { it.label.lowercase() }
+        apps.forEach { app ->
+            appsContainer.addView(MaterialCheckBox(this).apply {
+                text = "${app.label}\n${app.packageName}"
+                isChecked = app.packageName in allowed
+                setOnCheckedChangeListener { _, checked ->
+                    quickShare.setAllowed(app.packageName, checked)
+                    renderApps(searchField.text?.toString().orEmpty())
+                }
+                contentDescription = app.packageName
+            })
+        }
+    }
+
+    private fun availableApps(): List<AppEntry> {
+        return packageManager.getInstalledApplications(0)
+            .asSequence()
+            .filter { it.packageName != packageName() }
+            .filter { it.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0 }
+            .filter { it.enabled }
+            .filter { packageManager.getLaunchIntentForPackage(it.packageName) != null }
+            .map { AppEntry(it.packageName, packageManager.getApplicationLabel(it).toString()) }
+            .distinctBy { it.packageName }
+            .sortedBy { it.label.lowercase() }
+            .toList()
     }
 
     private fun applicationLabel(packageName: String): String = runCatching {

@@ -77,6 +77,7 @@
     <string name="quick_share_enabled">Включить быструю печать</string>
     <string name="quick_share_no_apps">Сначала отправьте PDF через Share из приложения — оно появится здесь.</string>
     <string name="quick_share_choose_apps">Выберите приложения для автоматической печати:</string>
+    <string name="quick_share_search">Поиск приложения</string>
     <string name="quick_share_printed">PDF отправлен на печать</string>
     <string name="quick_share_usb_denied">Доступ к USB отклонён</string>
     <string name="history_empty">Заданий печати ещё нет</string>
