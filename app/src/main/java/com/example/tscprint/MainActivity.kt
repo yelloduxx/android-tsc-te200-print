@@ -727,7 +727,10 @@ class MainActivity : AppCompatActivity() {
     private fun clearPagePreview() {
         previewRequestId++
         pageAdapter.submit(emptyList())
-        pageThumbnails.forEach { if (!it.isRecycled) it.recycle() }
+        // RecyclerView may still draw a detached holder during the next frame.
+        // Do not recycle these bitmaps manually: the old adapter list is released
+        // and the GC will reclaim the bitmaps after all views stop referencing them.
+        preview.setImageDrawable(null)
         pageThumbnails = emptyList()
         pageSelection.reset(0)
         pageRail.visibility = View.GONE
@@ -745,7 +748,6 @@ class MainActivity : AppCompatActivity() {
                 val thumbnails = PdfToTspl.renderThumbnails(this, uri)
                 main.post {
                     if (requestId != previewRequestId || uri != selectedUri) {
-                        thumbnails.forEach { if (!it.isRecycled) it.recycle() }
                         return@post
                     }
                     pageThumbnails = thumbnails
