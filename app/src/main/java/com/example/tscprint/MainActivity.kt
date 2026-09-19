@@ -310,7 +310,7 @@ class MainActivity : AppCompatActivity() {
             contentDescription = getString(R.string.status_printer_unknown)
         }
         val historyButton = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_recent_history)
+            setImageResource(R.drawable.ic_history)
             imageTintList = ColorStateList.valueOf(themeColor(MaterialR.attr.colorOnSurface))
             contentDescription = getString(R.string.btn_history)
             layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply {
@@ -328,6 +328,7 @@ class MainActivity : AppCompatActivity() {
             setImageResource(R.drawable.ic_settings)
             imageTintList = ColorStateList.valueOf(themeColor(MaterialR.attr.colorOnSurface))
             contentDescription = getString(R.string.settings_title)
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
             val ta = obtainStyledAttributes(
                 intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
             )

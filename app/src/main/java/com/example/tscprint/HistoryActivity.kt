@@ -6,7 +6,9 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateFormat
+import android.os.Build
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -30,6 +32,22 @@ class HistoryActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
             setBackgroundColor(themeColor(MaterialR.attr.colorSurface))
+        }
+        root.setOnApplyWindowInsetsListener { _, insets ->
+            val top: Int
+            val bottom: Int
+            if (Build.VERSION.SDK_INT >= 30) {
+                val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                top = bars.top
+                bottom = bars.bottom
+            } else {
+                @Suppress("DEPRECATION")
+                top = insets.systemWindowInsetTop
+                @Suppress("DEPRECATION")
+                bottom = insets.systemWindowInsetBottom
+            }
+            root.setPadding(dp(16), top + dp(8), dp(16), dp(16) + bottom)
+            insets
         }
         val title = TextView(this).apply {
             text = getString(R.string.btn_history)
@@ -101,7 +119,8 @@ class HistoryActivity : Activity() {
         val text = TextView(this).apply {
             val state = if (available) entry.status else getString(R.string.history_unavailable)
             val date = DateFormat.getMediumDateFormat(this@HistoryActivity).format(entry.timestamp)
-            this.text = "${entry.name}\n$date · ${entry.pages} стр. × ${entry.copies} · $state"
+            val time = DateFormat.getTimeFormat(this@HistoryActivity).format(entry.timestamp)
+            this.text = "${entry.name}\n$date, $time · ${entry.pages} стр. × ${entry.copies} · $state"
             setPadding(dp(16), dp(14), dp(16), dp(14))
             setTextColor(if (available) themeColor(MaterialR.attr.colorOnSurface) else Color.GRAY)
         }
