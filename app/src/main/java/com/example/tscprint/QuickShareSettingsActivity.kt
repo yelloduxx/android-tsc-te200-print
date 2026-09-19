@@ -6,6 +6,8 @@ import android.content.pm.ApplicationInfo
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.ViewGroup
@@ -19,21 +21,31 @@ import com.google.android.material.R as MaterialR
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import java.util.concurrent.Executors
 
 class QuickShareSettingsActivity : Activity() {
 
     private val quickShare by lazy { QuickShareSettings(this) }
+    private val refreshExecutor = Executors.newSingleThreadExecutor()
+    private val main = Handler(Looper.getMainLooper())
     private lateinit var appsContainer: LinearLayout
     private lateinit var searchField: TextInputEditText
+    private var allApps: List<QuickShareSettings.AppEntry> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setTitle(R.string.quick_share_settings)
         setContentView(buildUi())
+        refreshAppsInBackground()
     }
 
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
+
+    override fun onDestroy() {
+        refreshExecutor.shutdown()
+        super.onDestroy()
     }
 
     private fun buildUi(): ViewGroup {
@@ -108,6 +120,7 @@ class QuickShareSettingsActivity : Activity() {
             }
             override fun afterTextChanged(s: Editable?) = Unit
         })
+        allApps = quickShare.cachedApps()
         renderApps("")
         root.addView(MaterialButton(this).apply {
             text = getString(R.string.close)
@@ -118,17 +131,15 @@ class QuickShareSettingsActivity : Activity() {
         return root
     }
 
-    private data class AppEntry(val packageName: String, val label: String)
-
     private fun renderApps(query: String) {
         if (!::appsContainer.isInitialized) return
         appsContainer.removeAllViews()
         val normalized = query.trim().lowercase()
         val allowed = quickShare.allowedPackages()
-        val apps = availableApps()
+        val apps = allApps
             .filter { normalized.isEmpty() ||
                 it.label.lowercase().contains(normalized) || it.packageName.contains(normalized) }
-            .sortedWith(compareByDescending<AppEntry> { it.packageName in allowed }
+            .sortedWith(compareByDescending<QuickShareSettings.AppEntry> { it.packageName in allowed }
                 .thenBy { it.label.lowercase() })
         if (apps.isEmpty()) {
             appsContainer.addView(TextView(this).apply {
@@ -151,17 +162,31 @@ class QuickShareSettingsActivity : Activity() {
         }
     }
 
-    private fun availableApps(): List<AppEntry> {
+    private fun discoverApps(): List<QuickShareSettings.AppEntry> {
         return packageManager.getInstalledApplications(0)
             .asSequence()
             .filter { it.packageName != packageName() }
             .filter { it.flags and (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0 }
             .filter { it.enabled }
             .filter { packageManager.getLaunchIntentForPackage(it.packageName) != null }
-            .map { AppEntry(it.packageName, packageManager.getApplicationLabel(it).toString()) }
+            .map { QuickShareSettings.AppEntry(it.packageName, packageManager.getApplicationLabel(it).toString()) }
             .distinctBy { it.packageName }
             .sortedBy { it.label.lowercase() }
             .toList()
+    }
+
+    private fun refreshAppsInBackground() {
+        refreshExecutor.execute {
+            val fresh = discoverApps()
+            quickShare.saveCachedApps(fresh)
+            main.post {
+                if (isFinishing || isDestroyed) return@post
+                if (fresh != allApps) {
+                    allApps = fresh
+                    renderApps(searchField.text?.toString().orEmpty())
+                }
+            }
+        }
     }
 
     private fun applicationLabel(packageName: String): String = runCatching {
