@@ -35,8 +35,8 @@
     <string name="label_copies">Количество копий</string>
     <string name="copies_decrease">Уменьшить количество копий</string>
     <string name="copies_increase">Увеличить количество копий</string>
-    <string name="copy_order_collated">Комплектами: 1 2 3 4 · 1 2 3 4</string>
-    <string name="copy_order_grouped">Группами: 1 1 · 2 2 · 3 3 · 4 4</string>
+    <string name="copy_order_collated">Комплектами: 1 2 · 1 2</string>
+    <string name="copy_order_grouped">Группами: 1 1 · 2 2</string>
 
     <string name="threshold_format">Порог бинаризации: %1$d</string>
 

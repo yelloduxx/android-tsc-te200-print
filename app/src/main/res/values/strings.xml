@@ -35,8 +35,8 @@
     <string name="label_copies">Copies</string>
     <string name="copies_decrease">Decrease copies</string>
     <string name="copies_increase">Increase copies</string>
-    <string name="copy_order_collated">Collated: 1 2 3 4 · 1 2 3 4</string>
-    <string name="copy_order_grouped">Grouped: 1 1 · 2 2 · 3 3 · 4 4</string>
+    <string name="copy_order_collated">Collated: 1 2 · 1 2</string>
+    <string name="copy_order_grouped">Grouped: 1 1 · 2 2</string>
 
     <string name="threshold_format">Binarization threshold: %1$d</string>
 

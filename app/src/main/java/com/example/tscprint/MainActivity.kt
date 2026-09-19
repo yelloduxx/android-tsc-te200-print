@@ -281,9 +281,6 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .setNeutralButton(R.string.btn_diagnostics) { _, _ -> showDiagnosticsDialog() }
-            .setPositiveButton(R.string.btn_quick_share) { _, _ ->
-                startActivity(Intent(this, QuickShareSettingsActivity::class.java))
-            }
             .show()
     }
 
@@ -362,14 +359,14 @@ class MainActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             layoutParams = matchWrap()
         }
-        fileActions.addView(pick, LinearLayout.LayoutParams(0, dp(52), 1f))
+        fileActions.addView(pick, LinearLayout.LayoutParams(0, dp(60), 1f))
 
         printButton = button(getString(R.string.btn_print_short), TONAL)
         printButton.setOnClickListener {
             if (queueRunning) stopPrintQueue() else startSendPrepared()
         }
         printButton.visibility = View.GONE
-        fileActions.addView(printButton, LinearLayout.LayoutParams(0, dp(52), 1f).apply {
+        fileActions.addView(printButton, LinearLayout.LayoutParams(0, dp(60), 1f).apply {
             marginStart = dp(8)
         })
         printCard.addView(fileActions)
@@ -539,6 +536,12 @@ class MainActivity : AppCompatActivity() {
         content.addView(save, matchWrap())
 
         val accessCard = newCard(content, getString(R.string.section_access))
+        val quickShare = button(getString(R.string.btn_quick_share), OUTLINED)
+        quickShare.setOnClickListener {
+            startActivity(Intent(this, QuickShareSettingsActivity::class.java))
+        }
+        accessCard.addView(quickShare, matchWrap())
+
         val authorize = button(getString(R.string.btn_allow_usb), TONAL)
         authorize.setOnClickListener { authorizeUsb() }
         accessCard.addView(authorize, matchWrap())

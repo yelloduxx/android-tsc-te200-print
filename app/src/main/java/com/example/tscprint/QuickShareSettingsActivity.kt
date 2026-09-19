@@ -1,6 +1,7 @@
 package com.example.tscprint
 
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.ViewGroup
@@ -49,8 +50,8 @@ class QuickShareSettingsActivity : Activity() {
         })
 
         val scrollContent = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val candidates = quickShare.candidates().toList().sorted()
-        if (candidates.isEmpty()) {
+        val apps = availableApps()
+        if (apps.isEmpty()) {
             scrollContent.addView(TextView(this).apply {
                 text = getString(R.string.quick_share_no_apps)
                 setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
@@ -62,13 +63,14 @@ class QuickShareSettingsActivity : Activity() {
                 setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
                 setPadding(0, dp(16), 0, dp(4))
             })
-            candidates.forEach { packageName ->
-                val label = applicationLabel(packageName)
+            apps.forEach { app ->
                 scrollContent.addView(MaterialCheckBox(this).apply {
-                    text = label
-                    isChecked = packageName in quickShare.allowedPackages()
-                    setOnCheckedChangeListener { _, checked -> quickShare.setAllowed(packageName, checked) }
-                    contentDescription = packageName
+                    text = "${app.label}\n${app.packageName}"
+                    isChecked = app.packageName in quickShare.allowedPackages()
+                    setOnCheckedChangeListener { _, checked ->
+                        quickShare.setAllowed(app.packageName, checked)
+                    }
+                    contentDescription = app.packageName
                 })
             }
         }
@@ -84,10 +86,35 @@ class QuickShareSettingsActivity : Activity() {
         return root
     }
 
+    private data class AppEntry(val packageName: String, val label: String)
+
+    private fun availableApps(): List<AppEntry> {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val entries = packageManager.queryIntentActivities(launcherIntent, 0)
+            .mapNotNull { info ->
+                val packageName = info.activityInfo?.packageName ?: return@mapNotNull null
+                if (packageName == packageName()) return@mapNotNull null
+                AppEntry(packageName, info.loadLabel(packageManager).toString())
+            }
+            .distinctBy { it.packageName }
+            .toMutableList()
+
+        // Keep previously discovered/selected packages visible even if their launcher
+        // activity is not exposed by the current device's package-visibility rules.
+        (quickShare.candidates() + quickShare.allowedPackages()).forEach { packageName ->
+            if (packageName != packageName() && entries.none { it.packageName == packageName }) {
+                entries += AppEntry(packageName, applicationLabel(packageName))
+            }
+        }
+        return entries.sortedBy { it.label.lowercase() }
+    }
+
     private fun applicationLabel(packageName: String): String = runCatching {
         val info = packageManager.getApplicationInfo(packageName, 0)
-        "${packageManager.getApplicationLabel(info)}\n$packageName"
+        packageManager.getApplicationLabel(info).toString()
     }.getOrDefault(packageName)
+
+    private fun packageName(): String = applicationContext.packageName
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
