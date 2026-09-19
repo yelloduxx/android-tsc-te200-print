@@ -17,6 +17,8 @@ multi-page PDFs with barcodes and DataMatrix) straight from your phone — no la
 - **Page preview and selection**: horizontal page previews, checkboxes, all pages
   selected by default, manual selection, and page ranges.
 - **PDF rendering**: vector, raster and mixed pages are rasterized with `PdfRenderer`.
+- **Color-logo handling**: saturated colored marks such as the pink WB logo are
+  preserved as black ink in the monochrome print raster.
 - **Fit to label**: “Fit entirely” (contain) or “Fill with crop” (cover), keeping aspect ratio.
 - **Binarization**: hard threshold (barcodes) or Floyd–Steinberg dithering (photos).
 - **Trim white margins** around the image.
@@ -124,6 +126,8 @@ Android‑приложение и **плагин системной печати
 - **«Поделиться → TSC QuickPrint»**: отправка PDF из любого приложения и печать сразу.
 - **Многостраничные PDF**: каждая страница печатается как отдельная этикетка.
 - **Рендеринг PDF**: вектор, растр и смешанные страницы растеризуются через `PdfRenderer`.
+- **Цветные логотипы**: насыщенные цветные элементы, например розовый логотип WB,
+  сохраняются как чёрная графика в монохромной печати.
 - **Масштабирование под этикетку**: «Вписать целиком» (contain) или «Заполнить с обрезкой»
   (cover) с сохранением пропорций.
 - **Бинаризация**: жёсткий порог (штрих‑коды) или дизеринг Флойда–Стейнберга (фото).

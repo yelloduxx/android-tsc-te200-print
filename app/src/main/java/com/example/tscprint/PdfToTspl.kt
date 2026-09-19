@@ -227,7 +227,15 @@ object PdfToTspl {
             val r = (c shr 16) and 0xFF
             val g = (c shr 8) and 0xFF
             val b = c and 0xFF
-            gray[i] = 0.299f * r + 0.587f * g + 0.114f * b
+            val luminance = 0.299f * r + 0.587f * g + 0.114f * b
+            val colorSpread = maxOf(r, g, b) - minOf(r, g, b)
+            // Saturated logos (for example the pink WB mark) can be brighter
+            // than the binary threshold while still being visible ink.
+            gray[i] = if (colorSpread >= 40 && minOf(r, g, b) < 220) {
+                0f
+            } else {
+                luminance
+            }
         }
         val out = BooleanArray(w * h)
         if (!dither) {
