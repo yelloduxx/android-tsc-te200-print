@@ -27,6 +27,10 @@ multi-page PDFs with barcodes and DataMatrix) straight from your phone — no la
 - **Bilingual UI**: English / Русский, switchable in Settings.
 - **State preservation**: the selected PDF and page selection survive language changes;
   changing language does not start a new print job.
+- **Experimental print queue**: the direct-print path can print copies one label at a
+  time and stop between labels.
+- **Print history and diagnostics**: recent document references, USB status, and basic
+  printer diagnostics are available from the header.
 - **Material 3 (Material You)**: dynamic colors on Android 12+, light/dark theme.
 
 ## Requirements
@@ -97,6 +101,7 @@ app/src/main/java/com/example/tscprint/
   PdfToTspl.kt        — PDF → raster → binarize → TSPL
   PagePreviewAdapter.kt — horizontal multi-page preview and page checkboxes
   PageSelection.kt    — page ranges and selected-page state
+  PrintHistory.kt     — local metadata-only print history
   UsbPrinter.kt       — USB printer discovery, permission, bulk transfer
   PrintSettings.kt    — settings (SharedPreferences)
   LocaleHelper.kt     — per-app language (English / Russian)
@@ -140,6 +145,10 @@ Android‑приложение и **плагин системной печати
   этикетки и зазора.
 - **Сохранение состояния**: выбранный PDF и страницы сохраняются при смене языка;
   повторная печать при этом не запускается.
+- **Экспериментальная очередь печати**: прямая печать может печатать копии по одной
+  этикетке и останавливаться между этикетками.
+- **История и диагностика**: в шапке доступны последние задания, статус USB и базовая
+  информация о принтере.
 - **Material 3 (Material You)**: динамические цвета на Android 12+, тёмная/светлая тема.
 
 ## Требования
@@ -210,6 +219,7 @@ app/src/main/java/com/example/tscprint/
   PdfToTspl.kt        — PDF → растр → бинаризация → TSPL
   PagePreviewAdapter.kt — горизонтальный предпросмотр и галочки страниц
   PageSelection.kt    — диапазоны и состояние выбранных страниц
+  PrintHistory.kt     — локальная история без копирования PDF
   UsbPrinter.kt       — поиск USB-принтера, разрешение, bulk-передача
   PrintSettings.kt    — настройки (SharedPreferences)
   LocaleHelper.kt     — язык приложения (English / Russian)

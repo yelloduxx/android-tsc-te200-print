@@ -12,6 +12,7 @@ import android.printservice.PrintJob
 import android.printservice.PrintService
 import android.printservice.PrinterDiscoverySession
 import android.util.Log
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
@@ -86,7 +87,12 @@ class TscPrintService : PrintService() {
             } catch (e: Exception) {
                 Log.e(TAG, "Не удалось сохранить last_preview.png", e)
             }
-            return prepared.tspl
+            val copies = settings.copies.coerceIn(1, 999)
+            if (copies == 1) return prepared.tspl
+            return ByteArrayOutputStream(prepared.tspl.size * copies).use { output ->
+                repeat(copies) { output.write(prepared.tspl) }
+                output.toByteArray()
+            }
         } finally {
             temp.delete()
         }

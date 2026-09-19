@@ -25,7 +25,8 @@ object PdfToTspl {
         val preview: Bitmap,
         val widthDots: Int,
         val heightDots: Int,
-        val pageCount: Int
+        val pageCount: Int,
+        val jobs: List<ByteArray> = listOf(tspl)
     )
 
     fun prepare(
@@ -71,6 +72,7 @@ object PdfToTspl {
                 throw IllegalStateException("No pages selected")
             }
             val output = ByteArrayOutputStream()
+            val jobs = mutableListOf<ByteArray>()
             var preview: Bitmap? = null
             for (index in 0 until r.pageCount) {
                 if (index !in pages) continue
@@ -104,9 +106,9 @@ object PdfToTspl {
                     val mono = toMono(fitted, dither, threshold)
                     fitted.recycle()
                     val packed = pack(mono, targetW, targetH)
-                    output.write(
-                        buildTspl(packed, targetW, targetH, widthMm, heightMm, gapMm, density)
-                    )
+                    val job = buildTspl(packed, targetW, targetH, widthMm, heightMm, gapMm, density)
+                    jobs += job
+                    output.write(job)
                     if (preview == null) preview = toPreview(mono, targetW, targetH)
                 }
             }
@@ -115,7 +117,8 @@ object PdfToTspl {
                 preview ?: throw IllegalStateException("Could not render pages"),
                 targetW,
                 targetH,
-                r.pageCount
+                r.pageCount,
+                jobs
             )
         }
     }
@@ -148,7 +151,7 @@ object PdfToTspl {
                     )
                     val width = (p.width * scale).roundToInt().coerceAtLeast(1)
                     val height = (p.height * scale).roundToInt().coerceAtLeast(1)
-                    val bitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888)
+                    val bitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.RGB_565)
                     bitmap.eraseColor(Color.WHITE)
                     val left = (maxWidth - width) / 2
                     val top = (maxHeight - height) / 2

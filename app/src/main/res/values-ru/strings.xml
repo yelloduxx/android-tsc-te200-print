@@ -31,6 +31,7 @@
     <string name="label_height">Высота этикетки, мм</string>
     <string name="label_gap">Зазор между этикетками, мм</string>
     <string name="label_density">Плотность печати (0–15)</string>
+    <string name="label_copies">Количество копий</string>
 
     <string name="threshold_format">Порог бинаризации: %1$d</string>
 
@@ -53,6 +54,27 @@
     <string name="status_usb_denied">Доступ к USB отклонён</string>
     <string name="status_usb_granted">USB разрешён: %1$s</string>
     <string name="status_calibrating">Калибровка принтера по датчику…</string>
+    <string name="status_printer_unknown">Статус принтера неизвестен</string>
+    <string name="status_printer_disconnected">Принтер отключён</string>
+    <string name="status_printer_permission">Нужно разрешение USB</string>
+    <string name="status_printer_ready">Принтер готов</string>
+    <string name="status_printing">Печать</string>
+    <string name="status_queue_progress">Печать этикетки %1$d из %2$d…</string>
+    <string name="status_queue_done">Напечатано этикеток: %1$d</string>
+    <string name="status_queue_stopped">Печать остановлена</string>
+    <string name="btn_stop_print">Остановить печать</string>
+    <string name="btn_history">История</string>
+    <string name="btn_diagnostics">Диагностика</string>
+    <string name="history_empty">Заданий печати ещё нет</string>
+    <string name="history_clear">Очистить историю</string>
+    <string name="history_unavailable">Файл недоступен</string>
+    <string name="history_queued">В очереди</string>
+    <string name="history_printed">Напечатано</string>
+    <string name="history_stopped">Остановлено</string>
+    <string name="history_error">Ошибка</string>
+    <string name="diagnostics_version">Версия: %1$s</string>
+    <string name="diagnostics_no_usb">USB-устройства не найдены</string>
+    <string name="diagnostics_device">USB: %1$s, VID %2$d, PID %3$d</string>
     <string name="status_printer_not_found">Принтер не найден</string>
     <string name="toast_pick_first">Сначала выберите PDF-файл кнопкой «Выбрать PDF-файл»</string>
     <string name="status_daily_hint">Ежедневная печать: «Поделиться → Печать → TSC TE200».</string>
