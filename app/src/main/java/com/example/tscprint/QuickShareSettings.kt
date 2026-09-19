@@ -1,6 +1,13 @@
 package com.example.tscprint
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import java.io.File
+import java.io.FileOutputStream
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -8,7 +15,9 @@ class QuickShareSettings(context: Context) {
 
     data class AppEntry(val packageName: String, val label: String)
 
-    private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val iconDirectory = appContext.getDir(ICON_DIRECTORY, Context.MODE_PRIVATE)
 
     var enabled: Boolean
         get() = prefs.getBoolean(KEY_ENABLED, false)
@@ -54,11 +63,34 @@ class QuickShareSettings(context: Context) {
         prefs.edit().putString(KEY_APP_CACHE, json.toString()).apply()
     }
 
+    fun cachedIcon(packageName: String): Drawable? {
+        val bitmap = BitmapFactory.decodeFile(iconFile(packageName).absolutePath) ?: return null
+        return BitmapDrawable(appContext.resources, bitmap)
+    }
+
+    fun saveIcon(packageName: String, drawable: Drawable) {
+        val size = 96
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(canvas)
+        FileOutputStream(iconFile(packageName)).use { output ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
+        }
+        bitmap.recycle()
+    }
+
+    private fun iconFile(packageName: String): File {
+        val safeName = packageName.replace(Regex("[^A-Za-z0-9_.-]"), "_")
+        return File(iconDirectory, "$safeName.png")
+    }
+
     companion object {
         private const val PREFS = "tsc_quick_share"
         private const val KEY_ENABLED = "enabled"
         private const val KEY_CANDIDATES = "candidates"
         private const val KEY_ALLOWED = "allowed"
         private const val KEY_APP_CACHE = "app_cache"
+        private const val ICON_DIRECTORY = "quick_share_icons"
     }
 }

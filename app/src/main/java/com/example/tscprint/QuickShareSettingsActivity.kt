@@ -157,16 +157,15 @@ class QuickShareSettingsActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(0, dp(4), 0, dp(4))
             }
+            val icon = quickShare.cachedIcon(app.packageName)
+                ?: runCatching { packageManager.getApplicationIcon(app.packageName) }
+                    .getOrElse { getDrawable(android.R.drawable.sym_def_app_icon) }
             row.addView(ImageView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
                     marginEnd = dp(8)
                 }
                 scaleType = ImageView.ScaleType.CENTER_INSIDE
-                setImageDrawable(runCatching {
-                    packageManager.getApplicationIcon(app.packageName)
-                }.getOrElse {
-                    getDrawable(android.R.drawable.sym_def_app_icon)
-                })
+                setImageDrawable(icon)
                 contentDescription = app.label
             })
             row.addView(MaterialCheckBox(this).apply {
@@ -199,10 +198,16 @@ class QuickShareSettingsActivity : Activity() {
     private fun refreshAppsInBackground() {
         refreshExecutor.execute {
             val fresh = discoverApps()
+            val missingIcons = fresh.any { quickShare.cachedIcon(it.packageName) == null }
+            fresh.forEach { app ->
+                runCatching {
+                    quickShare.saveIcon(app.packageName, packageManager.getApplicationIcon(app.packageName))
+                }
+            }
             quickShare.saveCachedApps(fresh)
             main.post {
                 if (isFinishing || isDestroyed) return@post
-                if (fresh != allApps) {
+                if (fresh != allApps || missingIcons) {
                     allApps = fresh
                     renderApps(searchField.text?.toString().orEmpty())
                 }
