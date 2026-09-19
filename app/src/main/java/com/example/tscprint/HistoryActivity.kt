@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -159,9 +159,14 @@ class HistoryActivity : Activity() {
         }
         val delete = ImageButton(this).apply {
             layoutParams = FrameLayout.LayoutParams(dp(84), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.END)
-            setImageResource(android.R.drawable.ic_menu_delete)
+            setImageResource(R.drawable.ic_delete)
             imageTintList = ColorStateList.valueOf(Color.WHITE)
-            background = ColorDrawable(Color.rgb(211, 47, 47))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(Color.rgb(211, 47, 47))
+                val radius = dp(12).toFloat()
+                cornerRadii = floatArrayOf(0f, 0f, radius, radius, radius, radius, 0f, 0f)
+            }
             scaleType = ImageView.ScaleType.CENTER
             setPadding(0, 0, 0, 0)
             contentDescription = getString(R.string.history_delete)
