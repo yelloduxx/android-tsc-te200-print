@@ -1,0 +1,58 @@
+<resources>
+    <string name="app_name">TSC QuickPrint</string>
+    <string name="settings_title">Настройки</string>
+    <string name="language_label">Язык</string>
+    <string name="language_english">English</string>
+    <string name="language_russian">Русский</string>
+    <string name="cancel">Отмена</string>
+
+    <string name="section_print">Печать из приложения</string>
+    <string name="section_label">Параметры этикетки</string>
+    <string name="section_access">Доступ к принтеру</string>
+
+    <string name="btn_pick_pdf">Выбрать PDF-файл</string>
+    <string name="btn_print">Напечатать</string>
+    <string name="btn_test_print">Тестовая печать (текст и штрих-код)</string>
+    <string name="btn_save">Сохранить настройки</string>
+    <string name="btn_allow_usb">Разрешить USB</string>
+
+    <string name="hint_mm">Размеры в миллиметрах, как в драйвере принтера.</string>
+    <string name="hint_scale">Масштабирование под этикетку:</string>
+    <string name="radio_cover">Заполнить с обрезкой (cover)</string>
+    <string name="radio_contain">Вписать целиком (без обрезки)</string>
+    <string name="hint_threshold">Для штрих-кодов оставьте ~128 и выключите дизеринг.</string>
+    <string name="check_dither">Дизеринг (для фото и картинок)</string>
+    <string name="check_trim">Обрезать белые поля вокруг изображения</string>
+
+    <string name="label_width">Ширина этикетки, мм</string>
+    <string name="label_height">Высота этикетки, мм</string>
+    <string name="label_gap">Зазор между этикетками, мм</string>
+    <string name="label_density">Плотность печати (0–15)</string>
+
+    <string name="threshold_format">Порог бинаризации: %1$d</string>
+
+    <string name="status_no_file">Файл не выбран</string>
+    <string name="status_selected">Выбран: %1$s</string>
+    <string name="status_shared">Из «Поделиться»: %1$s</string>
+    <string name="status_preparing_preview">Готовим предпросмотр…</string>
+    <string name="status_preparing_print">Подготовка к печати…</string>
+    <string name="status_processing">Обработка PDF…</string>
+    <string name="status_ready">Готово: %1$d стр., %2$d×%3$d точек</string>
+    <string name="status_error">Ошибка: %1$s</string>
+    <string name="status_saved">Настройки сохранены: %1$d×%2$d мм</string>
+    <string name="status_usb_not_found">USB-устройство не найдено. Подключите TE200 через OTG.</string>
+    <string name="status_requesting_usb">Запрос доступа к USB…</string>
+    <string name="status_usb_already">Доступ уже есть: %1$s</string>
+    <string name="status_sending">Отправка %1$d байт на %2$s…</string>
+    <string name="status_sent">Отправлено %1$d байт</string>
+    <string name="status_print_error">Ошибка печати: %1$s</string>
+    <string name="status_usb_denied">Доступ к USB отклонён</string>
+    <string name="status_usb_granted">USB разрешён: %1$s</string>
+    <string name="status_printer_not_found">Принтер не найден</string>
+    <string name="toast_pick_first">Сначала выберите PDF-файл кнопкой «Выбрать PDF-файл»</string>
+    <string name="status_daily_hint">Ежедневная печать: «Поделиться → Печать → TSC TE200».</string>
+
+    <string name="service_print_failed">Ошибка печати</string>
+    <string name="service_printer_not_connected">Принтер TSC не подключён по USB</string>
+    <string name="service_no_document">Система не передала данные документа</string>
+</resources>

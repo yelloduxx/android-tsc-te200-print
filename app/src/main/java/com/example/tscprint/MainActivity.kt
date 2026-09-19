@@ -21,6 +21,7 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -33,6 +34,7 @@ import com.google.android.material.R as MaterialR
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.radiobutton.MaterialRadioButton
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
@@ -79,20 +81,28 @@ class MainActivity : AppCompatActivity() {
             val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
             val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
             if (!granted) {
-                status.text = "Доступ к USB отклонён"
+                status.text = getString(R.string.status_usb_denied)
                 return
             }
             if (device != null) {
                 settings.vendorId = device.vendorId
                 settings.productId = device.productId
-                status.text = "USB разрешён: ${device.deviceName}"
+                status.text = getString(R.string.status_usb_granted, device.deviceName)
             }
             val bytes = pendingBytes
             if (bytes != null) {
                 val target = printer.findTargets().firstOrNull()
-                if (target != null) doSend(target, bytes) else status.text = "Принтер не найден"
+                if (target != null) {
+                    doSend(target, bytes)
+                } else {
+                    status.text = getString(R.string.status_printer_not_found)
+                }
             }
         }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -152,19 +162,58 @@ class MainActivity : AppCompatActivity() {
         return color
     }
 
+    private fun showSettingsDialog() {
+        val codes = arrayOf(LocaleHelper.ENGLISH, LocaleHelper.RUSSIAN)
+        val labels = arrayOf(
+            getString(R.string.language_english),
+            getString(R.string.language_russian)
+        )
+        val current = codes.indexOf(LocaleHelper.getLanguage(this)).coerceAtLeast(0)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.settings_title)
+            .setSingleChoiceItems(labels, current) { dialog, which ->
+                val code = codes[which]
+                dialog.dismiss()
+                if (code != LocaleHelper.getLanguage(this)) {
+                    LocaleHelper.setLanguage(this, code)
+                    recreate()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
     private fun buildUi(): ViewGroup {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(themeColor(MaterialR.attr.colorSurface))
         }
 
+        val headerRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
         val header = TextView(this).apply {
-            text = "TSC QuickPrint"
+            text = getString(R.string.app_name)
             setTextAppearance(MaterialR.style.TextAppearance_Material3_HeadlineSmall)
             setTextColor(themeColor(MaterialR.attr.colorOnSurface))
-            setPadding(dp(20), dp(14), dp(20), dp(14))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        root.addView(header)
+        val gear = ImageButton(this).apply {
+            setImageResource(R.drawable.ic_settings)
+            imageTintList = ColorStateList.valueOf(themeColor(MaterialR.attr.colorOnSurface))
+            contentDescription = getString(R.string.settings_title)
+            val ta = obtainStyledAttributes(
+                intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
+            )
+            val bg = ta.getResourceId(0, 0)
+            ta.recycle()
+            setBackgroundResource(bg)
+            setOnClickListener { showSettingsDialog() }
+        }
+        headerRow.addView(header)
+        headerRow.addView(gear)
+        root.addView(headerRow)
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -175,13 +224,13 @@ class MainActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
         ))
 
-        val printCard = newCard(content, "Печать из приложения")
-        val pick = button("Выбрать PDF-файл", FILLED)
+        val printCard = newCard(content, getString(R.string.section_print))
+        val pick = button(getString(R.string.btn_pick_pdf), FILLED)
         pick.setOnClickListener { pickPdf() }
         printCard.addView(pick, matchWrap())
 
         fileName = TextView(this).apply {
-            text = "Файл не выбран"
+            text = getString(R.string.status_no_file)
             setTextAppearance(MaterialR.style.TextAppearance_Material3_BodySmall)
             setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
             setPadding(0, dp(8), 0, 0)
@@ -207,82 +256,74 @@ class MainActivity : AppCompatActivity() {
             bottomMargin = dp(10)
         })
 
-        val printBtn = button("Напечатать", TONAL)
+        val printBtn = button(getString(R.string.btn_print), TONAL)
         printBtn.setOnClickListener { startSendPrepared() }
         printCard.addView(printBtn, matchWrap())
 
-        val testBtn = button(
-            "Тестовая печать (текст и штрих-код)",
-            OUTLINED
-        )
+        val testBtn = button(getString(R.string.btn_test_print), OUTLINED)
         testBtn.setOnClickListener { testPrint() }
         printCard.addView(testBtn, matchWrap())
 
-        val labelCard = newCard(content, "Параметры этикетки")
-        labelCard.addView(hint("Размеры в миллиметрах, как в драйвере принтера."))
-        widthField = textField(labelCard, "Ширина этикетки, мм", "58")
-        heightField = textField(labelCard, "Высота этикетки, мм", "30")
-        gapField = textField(labelCard, "Зазор между этикетками, мм", "2")
-        densityField = textField(labelCard, "Плотность печати (0–15)", "8")
+        val labelCard = newCard(content, getString(R.string.section_label))
+        labelCard.addView(hint(getString(R.string.hint_mm)))
+        widthField = textField(labelCard, getString(R.string.label_width), "58")
+        heightField = textField(labelCard, getString(R.string.label_height), "30")
+        gapField = textField(labelCard, getString(R.string.label_gap), "2")
+        densityField = textField(labelCard, getString(R.string.label_density), "8")
 
-        labelCard.addView(hint("Масштабирование под этикетку:"))
+        labelCard.addView(hint(getString(R.string.hint_scale)))
         val group = RadioGroup(this).apply {
             orientation = RadioGroup.VERTICAL
             setPadding(0, dp(4), 0, 0)
         }
         coverRadio = MaterialRadioButton(this).apply {
             id = View.generateViewId()
-            text = "Заполнить с обрезкой (cover)"
+            text = getString(R.string.radio_cover)
         }
         containRadio = MaterialRadioButton(this).apply {
             id = View.generateViewId()
-            text = "Вписать целиком (без обрезки)"
+            text = getString(R.string.radio_contain)
         }
         group.addView(coverRadio)
         group.addView(containRadio)
         labelCard.addView(group)
 
         thresholdLabel = TextView(this).apply {
-            text = "Порог бинаризации: 128"
+            text = getString(R.string.threshold_format, 128)
             setTextAppearance(MaterialR.style.TextAppearance_Material3_BodyMedium)
             setTextColor(themeColor(MaterialR.attr.colorOnSurface))
             setPadding(0, dp(10), 0, 0)
         }
         labelCard.addView(thresholdLabel)
-        labelCard.addView(hint("Для штрих-кодов оставьте ~128 и выключите дизеринг."))
+        labelCard.addView(hint(getString(R.string.hint_threshold)))
         thresholdBar = Slider(this).apply {
             valueFrom = 0f
             valueTo = 255f
             stepSize = 1f
             value = 128f
             addOnChangeListener { _, value, _ ->
-                thresholdLabel.text = "Порог бинаризации: ${value.toInt()}"
+                thresholdLabel.text = getString(R.string.threshold_format, value.toInt())
             }
         }
         labelCard.addView(thresholdBar)
 
-        ditherCheck = MaterialCheckBox(this).apply { text = "Дизеринг (для фото и картинок)" }
+        ditherCheck = MaterialCheckBox(this).apply { text = getString(R.string.check_dither) }
         labelCard.addView(ditherCheck)
 
-        trimCheck = MaterialCheckBox(this).apply {
-            text = "Обрезать белые поля вокруг изображения"
-        }
+        trimCheck = MaterialCheckBox(this).apply { text = getString(R.string.check_trim) }
         labelCard.addView(trimCheck)
 
-        val save = button("Сохранить настройки", FILLED)
+        val save = button(getString(R.string.btn_save), FILLED)
         save.setOnClickListener { saveSettings() }
         content.addView(save, matchWrap())
 
-        val accessCard = newCard(content, "Доступ к принтеру")
-        val authorize = button(
-            "Разрешить USB",
-            TONAL
-        )
+        val accessCard = newCard(content, getString(R.string.section_access))
+        val authorize = button(getString(R.string.btn_allow_usb), TONAL)
         authorize.setOnClickListener { authorizeUsb() }
         accessCard.addView(authorize, matchWrap())
 
         status = TextView(this).apply {
-            text = "Ежедневная печать: «Поделиться → Печать → TSC TE200»."
+            text = getString(R.string.status_daily_hint)
             setTextAppearance(MaterialR.style.TextAppearance_Material3_BodySmall)
             setTextColor(themeColor(MaterialR.attr.colorOnSurfaceVariant))
             setPadding(0, dp(12), 0, dp(4))
@@ -302,7 +343,7 @@ class MainActivity : AppCompatActivity() {
                 @Suppress("DEPRECATION")
                 bottom = insets.systemWindowInsetBottom
             }
-            header.setPadding(dp(20), top + dp(14), dp(20), dp(14))
+            headerRow.setPadding(dp(20), top + dp(14), dp(8), dp(14))
             content.setPadding(dp(12), dp(4), dp(12), dp(12) + bottom)
             insets
         }
@@ -382,7 +423,7 @@ class MainActivity : AppCompatActivity() {
         gapField.setText(settings.gapMm.toString())
         densityField.setText(settings.density.toString())
         thresholdBar.value = settings.threshold.toFloat().coerceIn(0f, 255f)
-        thresholdLabel.text = "Порог бинаризации: ${settings.threshold}"
+        thresholdLabel.text = getString(R.string.threshold_format, settings.threshold)
         ditherCheck.isChecked = settings.dither
         trimCheck.isChecked = settings.trim
         if (settings.cover) coverRadio.isChecked = true else containRadio.isChecked = true
@@ -398,7 +439,7 @@ class MainActivity : AppCompatActivity() {
         settings.trim = trimCheck.isChecked
         settings.cover = coverRadio.isChecked
         loadSettings()
-        status.text = "Настройки сохранены: ${settings.widthMm}×${settings.heightMm} мм"
+        status.text = getString(R.string.status_saved, settings.widthMm, settings.heightMm)
     }
 
     private fun pickPdf() {
@@ -417,8 +458,10 @@ class MainActivity : AppCompatActivity() {
             selectedUri = data?.data
             prepared = null
             preview.setImageDrawable(null)
-            fileName.text = "Выбран: ${selectedUri?.lastPathSegment ?: "PDF"}"
-            status.text = "Готовим предпросмотр..."
+            fileName.text = getString(
+                R.string.status_selected, selectedUri?.lastPathSegment ?: "PDF"
+            )
+            status.text = getString(R.string.status_preparing_preview)
             ensurePrepared { }
         }
     }
@@ -440,8 +483,8 @@ class MainActivity : AppCompatActivity() {
         selectedUri = uri
         prepared = null
         preview.setImageDrawable(null)
-        fileName.text = "Из «Поделиться»: ${uri.lastPathSegment ?: "PDF"}"
-        status.text = "Подготовка к печати..."
+        fileName.text = getString(R.string.status_shared, uri.lastPathSegment ?: "PDF")
+        status.text = getString(R.string.status_preparing_print)
         ensurePrepared { result ->
             pendingBytes = result.tspl
             startSend(result.tspl)
@@ -462,7 +505,7 @@ class MainActivity : AppCompatActivity() {
         }
         val uri = selectedUri
         if (uri == null) {
-            toast("Сначала выберите PDF-файл кнопкой «Выбрать PDF-файл»")
+            toast(getString(R.string.toast_pick_first))
             return
         }
         val (w, h) = labelSize()
@@ -472,7 +515,7 @@ class MainActivity : AppCompatActivity() {
         val dither = ditherCheck.isChecked
         val trim = trimCheck.isChecked
         val threshold = thresholdBar.value.toInt()
-        status.text = "Обработка PDF..."
+        status.text = getString(R.string.status_processing)
         io.execute {
             try {
                 val result = PdfToTspl.prepare(
@@ -481,12 +524,13 @@ class MainActivity : AppCompatActivity() {
                 main.post {
                     prepared = result
                     preview.setImageBitmap(result.preview)
-                    status.text = "Готово: ${result.pageCount} стр., " +
-                        "${result.widthDots}×${result.heightDots} точек"
+                    status.text = getString(
+                        R.string.status_ready, result.pageCount, result.widthDots, result.heightDots
+                    )
                     onReady(result)
                 }
             } catch (e: Exception) {
-                main.post { status.text = "Ошибка: ${e.message}" }
+                main.post { status.text = getString(R.string.status_error, e.message ?: "") }
             }
         }
     }
@@ -519,27 +563,27 @@ class MainActivity : AppCompatActivity() {
     private fun authorizeUsb() {
         val target = printer.findTargets().firstOrNull()
         if (target == null) {
-            status.text = "USB-устройство не найдено. Подключите TE200 через OTG."
+            status.text = getString(R.string.status_usb_not_found)
             return
         }
         if (printer.hasPermission(target.device)) {
             settings.vendorId = target.device.vendorId
             settings.productId = target.device.productId
-            status.text = "Доступ уже есть: ${target.device.deviceName}"
+            status.text = getString(R.string.status_usb_already, target.device.deviceName)
             return
         }
-        status.text = "Запрос доступа к USB..."
+        status.text = getString(R.string.status_requesting_usb)
         printer.requestPermission(target.device, ACTION_USB_PERMISSION)
     }
 
     private fun startSend(bytes: ByteArray) {
         val target = printer.findTargets().firstOrNull()
         if (target == null) {
-            status.text = "USB-устройство не найдено. Подключите TE200 через OTG."
+            status.text = getString(R.string.status_usb_not_found)
             return
         }
         if (!printer.hasPermission(target.device)) {
-            status.text = "Запрос доступа к USB..."
+            status.text = getString(R.string.status_requesting_usb)
             printer.requestPermission(target.device, ACTION_USB_PERMISSION)
             return
         }
@@ -547,13 +591,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doSend(target: UsbPrinter.Target, bytes: ByteArray) {
-        status.text = "Отправка ${bytes.size} байт на ${target.device.deviceName}..."
+        status.text = getString(R.string.status_sending, bytes.size, target.device.deviceName)
         io.execute {
             try {
                 val sent = printer.send(target, bytes)
-                main.post { status.text = "Отправлено $sent байт" }
+                main.post { status.text = getString(R.string.status_sent, sent) }
             } catch (e: Exception) {
-                main.post { status.text = "Ошибка печати: ${e.message}" }
+                main.post {
+                    status.text = getString(R.string.status_print_error, e.message ?: "")
+                }
             }
         }
     }

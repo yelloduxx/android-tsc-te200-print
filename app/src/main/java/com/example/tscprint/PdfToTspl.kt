@@ -39,7 +39,7 @@ object PdfToTspl {
         trim: Boolean = true
     ): Prepared {
         val pfd = context.contentResolver.openFileDescriptor(uri, "r")
-            ?: throw IllegalStateException("Не удалось открыть файл")
+            ?: throw IllegalStateException("Could not open file")
         return pfd.use {
             prepare(it, widthMm, heightMm, cover, dither, threshold, gapMm, density, trim)
         }
@@ -61,7 +61,7 @@ object PdfToTspl {
 
         val renderer = PdfRenderer(pfd)
         renderer.use { r ->
-            if (r.pageCount < 1) throw IllegalStateException("В PDF нет страниц")
+            if (r.pageCount < 1) throw IllegalStateException("PDF has no pages")
             val output = ByteArrayOutputStream()
             var preview: Bitmap? = null
             for (index in 0 until r.pageCount) {
@@ -103,7 +103,7 @@ object PdfToTspl {
             }
             return Prepared(
                 output.toByteArray(),
-                preview ?: throw IllegalStateException("Не удалось отрисовать страницы"),
+                preview ?: throw IllegalStateException("Could not render pages"),
                 targetW,
                 targetH,
                 r.pageCount

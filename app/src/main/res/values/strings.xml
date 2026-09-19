@@ -1,0 +1,58 @@
+<resources>
+    <string name="app_name">TSC QuickPrint</string>
+    <string name="settings_title">Settings</string>
+    <string name="language_label">Language</string>
+    <string name="language_english">English</string>
+    <string name="language_russian">Русский</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="section_print">Print from app</string>
+    <string name="section_label">Label settings</string>
+    <string name="section_access">Printer access</string>
+
+    <string name="btn_pick_pdf">Choose PDF file</string>
+    <string name="btn_print">Print</string>
+    <string name="btn_test_print">Test print (text &amp; barcode)</string>
+    <string name="btn_save">Save settings</string>
+    <string name="btn_allow_usb">Allow USB</string>
+
+    <string name="hint_mm">Sizes in millimeters, as in the printer driver.</string>
+    <string name="hint_scale">Scaling to label:</string>
+    <string name="radio_cover">Fill with crop (cover)</string>
+    <string name="radio_contain">Fit entirely (no crop)</string>
+    <string name="hint_threshold">For barcodes keep ~128 and turn off dithering.</string>
+    <string name="check_dither">Dithering (for photos and images)</string>
+    <string name="check_trim">Trim white margins around the image</string>
+
+    <string name="label_width">Label width, mm</string>
+    <string name="label_height">Label height, mm</string>
+    <string name="label_gap">Gap between labels, mm</string>
+    <string name="label_density">Print density (0–15)</string>
+
+    <string name="threshold_format">Binarization threshold: %1$d</string>
+
+    <string name="status_no_file">No file selected</string>
+    <string name="status_selected">Selected: %1$s</string>
+    <string name="status_shared">From Share: %1$s</string>
+    <string name="status_preparing_preview">Preparing preview…</string>
+    <string name="status_preparing_print">Preparing to print…</string>
+    <string name="status_processing">Processing PDF…</string>
+    <string name="status_ready">Ready: %1$d page(s), %2$d×%3$d dots</string>
+    <string name="status_error">Error: %1$s</string>
+    <string name="status_saved">Settings saved: %1$d×%2$d mm</string>
+    <string name="status_usb_not_found">USB device not found. Connect the TE200 via OTG.</string>
+    <string name="status_requesting_usb">Requesting USB access…</string>
+    <string name="status_usb_already">Access already granted: %1$s</string>
+    <string name="status_sending">Sending %1$d bytes to %2$s…</string>
+    <string name="status_sent">Sent %1$d bytes</string>
+    <string name="status_print_error">Print error: %1$s</string>
+    <string name="status_usb_denied">USB access denied</string>
+    <string name="status_usb_granted">USB allowed: %1$s</string>
+    <string name="status_printer_not_found">Printer not found</string>
+    <string name="toast_pick_first">First choose a PDF with “Choose PDF file”</string>
+    <string name="status_daily_hint">Daily printing: “Share → Print → TSC TE200”.</string>
+
+    <string name="service_print_failed">Print failed</string>
+    <string name="service_printer_not_connected">TSC printer is not connected via USB</string>
+    <string name="service_no_document">The system did not provide document data</string>
+</resources>

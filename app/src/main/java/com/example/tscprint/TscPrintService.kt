@@ -19,6 +19,8 @@ class TscPrintService : PrintService() {
 
     private val main = Handler(Looper.getMainLooper())
 
+    private fun str(resId: Int): String = LocaleHelper.wrap(this).getString(resId)
+
     override fun onCreatePrinterDiscoverySession(): PrinterDiscoverySession = Session()
 
     override fun onPrintJobQueued(job: PrintJob) {
@@ -30,7 +32,7 @@ class TscPrintService : PrintService() {
             null
         }
         if (pfd == null) {
-            job.fail("Система не передала данные документа")
+            job.fail(str(R.string.service_no_document))
             return
         }
         val settings = PrintSettings(this)
@@ -39,12 +41,15 @@ class TscPrintService : PrintService() {
                 val tspl = processDocument(pfd, settings)
                 val printer = UsbPrinter(this)
                 val target = findPrinter(printer)
-                    ?: throw IllegalStateException("Принтер TSC не подключён по USB")
-                printer.send(target, tspl)
-                main.post { job.complete() }
+                if (target == null) {
+                    main.post { job.fail(str(R.string.service_printer_not_connected)) }
+                } else {
+                    printer.send(target, tspl)
+                    main.post { job.complete() }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Ошибка печати", e)
-                main.post { job.fail(e.message ?: "Ошибка печати") }
+                main.post { job.fail(str(R.string.service_print_failed)) }
             }
         }.start()
     }
