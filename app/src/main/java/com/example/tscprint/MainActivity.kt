@@ -103,6 +103,7 @@ class MainActivity : AppCompatActivity() {
     private var waitingForQueuePermission = false
     private var currentHistoryTimestamp: Long? = null
     private var lastPrinterError: String? = null
+    private var previewRequestId = 0L
     private lateinit var pageAdapter: PagePreviewAdapter
 
     private val permissionReceiver = object : BroadcastReceiver() {
@@ -672,6 +673,7 @@ class MainActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQ_PICK_PDF && resultCode == RESULT_OK) {
+            if (queueRunning) stopPrintQueue()
             selectedUri = data?.data
             selectedUri?.let { uri ->
                 val takeFlags = (data?.flags ?: 0) and Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -683,6 +685,7 @@ class MainActivity : AppCompatActivity() {
             sharePending = false
             pendingRestoreMode = null
             pendingRestorePages = null
+            resetCopiesForNewDocument()
             clearPagePreview()
             fileName.text = getString(
                 R.string.status_selected, selectedUri?.lastPathSegment ?: "PDF"
@@ -708,11 +711,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleShareIntent(intent: Intent?) {
         val uri = sharedUri(intent) ?: return
+        if (queueRunning) stopPrintQueue()
         selectedUri = uri
         prepared = null
         sharePending = true
         pendingRestoreMode = null
         pendingRestorePages = null
+        resetCopiesForNewDocument()
         clearPagePreview()
         fileName.text = getString(R.string.status_shared, uri.lastPathSegment ?: "PDF")
         status.text = getString(R.string.status_preparing_preview)
@@ -720,6 +725,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun clearPagePreview() {
+        previewRequestId++
         pageAdapter.submit(emptyList())
         pageThumbnails.forEach { if (!it.isRecycled) it.recycle() }
         pageThumbnails = emptyList()
@@ -732,11 +738,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun ensureDocumentPreview(autoPrintSinglePage: Boolean) {
         val uri = selectedUri ?: return
+        val requestId = ++previewRequestId
         status.text = getString(R.string.status_preparing_preview)
         io.execute {
             try {
                 val thumbnails = PdfToTspl.renderThumbnails(this, uri)
                 main.post {
+                    if (requestId != previewRequestId || uri != selectedUri) {
+                        thumbnails.forEach { if (!it.isRecycled) it.recycle() }
+                        return@post
+                    }
                     pageThumbnails = thumbnails
                     val restored = pendingRestorePages?.let { pages ->
                         pageSelection.restore(thumbnails.size, pendingRestoreMode, pages)
@@ -762,7 +773,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                main.post { status.text = getString(R.string.status_error, e.message ?: "") }
+                main.post {
+                    if (requestId == previewRequestId && uri == selectedUri) {
+                        status.text = getString(R.string.status_error, e.message ?: "")
+                    }
+                }
             }
         }
     }
@@ -852,10 +867,16 @@ class MainActivity : AppCompatActivity() {
         selectedUri = uri
         sharePending = false
         prepared = null
+        resetCopiesForNewDocument()
         clearPagePreview()
         fileName.text = getString(R.string.status_selected, uri.lastPathSegment ?: "PDF")
         status.text = getString(R.string.status_preparing_preview)
         ensureDocumentPreview(false)
+    }
+
+    private fun resetCopiesForNewDocument() {
+        copiesField.setText("1")
+        settings.copies = 1
     }
 
     private fun showDiagnosticsDialog() {
