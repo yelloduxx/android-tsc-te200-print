@@ -5,21 +5,22 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.hardware.usb.UsbDevice
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import java.util.concurrent.Executors
-import android.widget.Toast
 
 class QuickShareActivity : Activity() {
 
     companion object {
         private const val ACTION_USB_PERMISSION = "com.example.tscprint.QUICK_USB_PERMISSION"
+        private const val TAG = "QuickSharePrint"
     }
 
     private val io = Executors.newSingleThreadExecutor()
@@ -27,7 +28,9 @@ class QuickShareActivity : Activity() {
     private val printer by lazy { UsbPrinter(this) }
     private val settings by lazy { PrintSettings(this) }
     private val quickShare by lazy { QuickShareSettings(this) }
+    private val history by lazy { PrintHistory(this) }
     private var pendingUri: Uri? = null
+    private var historyTimestamp: Long? = null
 
     private val permissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -36,7 +39,10 @@ class QuickShareActivity : Activity() {
             val device: UsbDevice? = intent.getParcelableExtra(android.hardware.usb.UsbManager.EXTRA_DEVICE)
             val granted = intent.getBooleanExtra(android.hardware.usb.UsbManager.EXTRA_PERMISSION_GRANTED, false)
             if (granted && device != null) startPrint(pendingUri)
-            else finishWith(R.string.quick_share_usb_denied)
+            else {
+                Log.w(TAG, "USB permission was denied")
+                finish()
+            }
         }
     }
 
@@ -46,13 +52,19 @@ class QuickShareActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.decorView.setBackgroundColor(Color.TRANSPARENT)
+        window.setBackgroundDrawable(ColorDrawable(0x00000000))
+        window.setWindowAnimations(0)
+        window.attributes = window.attributes.apply {
+            alpha = 0f
+            dimAmount = 0f
+        }
         setContentView(View(this))
 
         val uri = sharedUri(intent)
         val source = ShareSource.packageName(this, intent)
         source?.let { quickShare.recordCandidate(it) }
         if (uri == null || !quickShare.isAllowed(source)) {
+            window.attributes = window.attributes.apply { alpha = 1f }
             forwardToMain(uri, source)
             return
         }
@@ -60,9 +72,9 @@ class QuickShareActivity : Activity() {
         registerPermissionReceiver()
         val target = printer.findTargets().firstOrNull()
         if (target == null) {
-            finishWith(R.string.status_usb_not_found)
+            Log.w(TAG, "No USB printer found for quick print")
+            finish()
         } else if (!printer.hasPermission(target.device)) {
-            finishToast(R.string.status_requesting_usb)
             printer.requestPermission(target.device, ACTION_USB_PERMISSION)
         } else {
             startPrint(uri)
@@ -97,10 +109,37 @@ class QuickShareActivity : Activity() {
                 )
                 val target = printer.findTargets().firstOrNull()
                     ?: throw IllegalStateException(getString(R.string.status_usb_not_found))
-                prepared.jobs.forEach { printer.send(target, it) }
-                main.post { finishWith(R.string.quick_share_printed) }
+                val copies = settings.copies.coerceIn(1, 999)
+                val entry = history.add(
+                    uri,
+                    displayName(uri),
+                    prepared.jobs.size,
+                    copies,
+                    getString(R.string.history_queued)
+                )
+                historyTimestamp = entry.timestamp
+                if (settings.copyOrder == 0) {
+                    repeat(copies) { prepared.jobs.forEach { printer.send(target, it) } }
+                } else {
+                    prepared.jobs.forEach { job -> repeat(copies) { printer.send(target, job) } }
+                }
+                history.updateStatus(entry.timestamp, getString(R.string.history_printed))
+                main.post { finish() }
             } catch (e: Exception) {
-                main.post { finishToastText(e.message ?: getString(R.string.status_printer_error)) }
+                Log.e(TAG, "Quick print failed", e)
+                val timestamp = historyTimestamp
+                if (timestamp != null) {
+                    history.updateStatus(timestamp, e.message ?: getString(R.string.status_printer_error))
+                } else {
+                    history.add(
+                        uri,
+                        displayName(uri),
+                        0,
+                        settings.copies.coerceIn(1, 999),
+                        e.message ?: getString(R.string.status_printer_error)
+                    )
+                }
+                main.post { finish() }
             }
         }
     }
@@ -138,17 +177,15 @@ class QuickShareActivity : Activity() {
         }
     }
 
+    private fun displayName(uri: Uri): String = runCatching {
+        contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+    }.getOrNull()?.takeIf { it.isNotBlank() } ?: uri.lastPathSegment ?: "PDF"
+
     private fun finishWith(message: Int) {
-        finishToast(message)
-    }
-
-    private fun finishToast(message: Int) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-        finish()
-    }
-
-    private fun finishToastText(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        Log.w(TAG, getString(message))
         finish()
     }
 }
