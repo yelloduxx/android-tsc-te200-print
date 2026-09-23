@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.util.LruCache
 import java.io.File
 import java.io.FileOutputStream
 import org.json.JSONArray
@@ -64,7 +65,11 @@ class QuickShareSettings(context: Context) {
     }
 
     fun cachedIcon(packageName: String): Drawable? {
-        val bitmap = BitmapFactory.decodeFile(iconFile(packageName).absolutePath) ?: return null
+        val bitmap = iconCache.get(packageName)
+            ?: BitmapFactory.decodeFile(iconFile(packageName).absolutePath)?.also {
+                iconCache.put(packageName, it)
+            }
+            ?: return null
         return BitmapDrawable(appContext.resources, bitmap)
     }
 
@@ -77,7 +82,7 @@ class QuickShareSettings(context: Context) {
         FileOutputStream(iconFile(packageName)).use { output ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
         }
-        bitmap.recycle()
+        iconCache.put(packageName, bitmap)
     }
 
     private fun iconFile(packageName: String): File {
@@ -92,5 +97,8 @@ class QuickShareSettings(context: Context) {
         private const val KEY_ALLOWED = "allowed"
         private const val KEY_APP_CACHE = "app_cache"
         private const val ICON_DIRECTORY = "quick_share_icons"
+        private val iconCache = object : LruCache<String, Bitmap>(4 * 1024) {
+            override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
+        }
     }
 }
