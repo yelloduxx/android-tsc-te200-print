@@ -2,9 +2,11 @@ package com.example.tscprint
 
 import android.app.Activity
 import android.content.BroadcastReceiver
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
 import android.graphics.drawable.ColorDrawable
 import android.hardware.usb.UsbDevice
 import android.net.Uri
@@ -29,6 +31,7 @@ class QuickShareActivity : Activity() {
     private val settings by lazy { PrintSettings(this) }
     private val quickShare by lazy { QuickShareSettings(this) }
     private val history by lazy { PrintHistory(this) }
+    private val notifier by lazy { QuickShareNotifier(this) }
     private var pendingUri: Uri? = null
     private var historyTimestamp: Long? = null
 
@@ -41,6 +44,7 @@ class QuickShareActivity : Activity() {
             if (granted && device != null) startPrint(pendingUri)
             else {
                 Log.w(TAG, "USB permission was denied")
+                notifier.showError(getString(R.string.quick_share_usb_denied))
                 finish()
             }
         }
@@ -61,18 +65,20 @@ class QuickShareActivity : Activity() {
         setContentView(View(this))
 
         val uri = sharedUri(intent)
-        val source = ShareSource.packageName(this, intent)
+        val source = userSourcePackage(ShareSource.packageName(this, intent))
         source?.let { quickShare.recordCandidate(it) }
-        if (uri == null || !quickShare.isAllowed(source)) {
+        Log.i(TAG, "Incoming ${intent.action}, source=${source ?: "system-or-unknown"}")
+        if (uri == null || !quickShare.isAllowed(intent.action, source)) {
             window.attributes = window.attributes.apply { alpha = 1f }
             forwardToMain(uri, source)
             return
         }
         pendingUri = uri
         registerPermissionReceiver()
-        val target = printer.findTargets().firstOrNull()
+        val target = configuredTarget()
         if (target == null) {
             Log.w(TAG, "No USB printer found for quick print")
+            notifier.showError(getString(R.string.status_usb_not_found))
             finish()
         } else if (!printer.hasPermission(target.device)) {
             printer.requestPermission(target.device, ACTION_USB_PERMISSION)
@@ -107,9 +113,9 @@ class QuickShareActivity : Activity() {
                     settings.trim,
                     null
                 )
-                val target = printer.findTargets().firstOrNull()
+                val target = configuredTarget()
                     ?: throw IllegalStateException(getString(R.string.status_usb_not_found))
-                val copies = settings.copies.coerceIn(1, 999)
+                val copies = 1
                 val entry = history.add(
                     uri,
                     displayName(uri),
@@ -118,11 +124,7 @@ class QuickShareActivity : Activity() {
                     getString(R.string.history_queued)
                 )
                 historyTimestamp = entry.timestamp
-                if (settings.copyOrder == 0) {
-                    repeat(copies) { prepared.jobs.forEach { printer.send(target, it) } }
-                } else {
-                    prepared.jobs.forEach { job -> repeat(copies) { printer.send(target, job) } }
-                }
+                prepared.jobs.forEach { printer.send(target, it) }
                 history.updateStatus(entry.timestamp, getString(R.string.history_printed))
                 main.post { finish() }
             } catch (e: Exception) {
@@ -135,11 +137,14 @@ class QuickShareActivity : Activity() {
                         uri,
                         displayName(uri),
                         0,
-                        settings.copies.coerceIn(1, 999),
+                        1,
                         e.message ?: getString(R.string.status_printer_error)
                     )
                 }
-                main.post { finish() }
+                main.post {
+                    notifier.showError(e.message ?: getString(R.string.status_printer_error))
+                    finish()
+                }
             }
         }
     }
@@ -153,10 +158,16 @@ class QuickShareActivity : Activity() {
             action = Intent.ACTION_SEND
             type = "application/pdf"
             putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newUri(contentResolver, "PDF", uri)
             source?.let { putExtra(ShareSource.EXTRA_SOURCE_PACKAGE, it) }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        startActivity(forward)
+        try {
+            startActivity(forward)
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Cannot forward PDF to preview", e)
+            notifier.showError(getString(R.string.quick_share_document_unavailable))
+        }
         finish()
     }
 
@@ -183,6 +194,23 @@ class QuickShareActivity : Activity() {
                 if (cursor.moveToFirst()) cursor.getString(0) else null
             }
     }.getOrNull()?.takeIf { it.isNotBlank() } ?: uri.lastPathSegment ?: "PDF"
+
+    private fun userSourcePackage(packageName: String?): String? {
+        if (packageName == null) return null
+        val info = runCatching { packageManager.getApplicationInfo(packageName, 0) }.getOrNull()
+            ?: return packageName
+        val systemFlags = ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
+        return packageName.takeIf { info.flags and systemFlags == 0 }
+    }
+
+    private fun configuredTarget(): UsbPrinter.Target? {
+        val target = printer.findTarget(settings.vendorId, settings.productId) ?: return null
+        if (settings.vendorId == 0 && settings.productId == 0) {
+            settings.vendorId = target.device.vendorId
+            settings.productId = target.device.productId
+        }
+        return target
+    }
 
     private fun finishWith(message: Int) {
         Log.w(TAG, getString(message))

@@ -33,8 +33,12 @@ class QuickShareSettings(context: Context) {
 
     fun allowedPackages(): Set<String> = prefs.getStringSet(KEY_ALLOWED, emptySet()).orEmpty()
 
-    fun isAllowed(packageName: String?): Boolean =
-        enabled && packageName != null && packageName in allowedPackages()
+    fun isAllowed(action: String?, packageName: String?): Boolean = QuickSharePolicy.shouldPrintSilently(
+        enabled,
+        action,
+        packageName,
+        allowedPackages()
+    )
 
     fun setAllowed(packageName: String, allowed: Boolean) {
         val updated = allowedPackages().toMutableSet()

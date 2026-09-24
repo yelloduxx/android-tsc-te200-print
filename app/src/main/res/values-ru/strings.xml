@@ -73,13 +73,16 @@
     <string name="btn_diagnostics">Диагностика</string>
     <string name="btn_quick_share">Быстрая печать Share</string>
     <string name="quick_share_settings">Быстрая печать из Share</string>
-    <string name="quick_share_explanation">Для выбранных приложений PDF сразу отправляется на принтер без открытия предпросмотра. Новые задания печатаются одной копией.</string>
+    <string name="quick_share_explanation">Share печатает без предпросмотра из выбранных приложений, если Android сообщает отправителя. «Открыть с помощью TSC QuickPrint» печатает сразу. Новые задания печатаются одной копией.</string>
     <string name="quick_share_enabled">Включить быструю печать</string>
     <string name="quick_share_no_apps">Сначала отправьте PDF через Share из приложения — оно появится здесь.</string>
     <string name="quick_share_choose_apps">Выберите приложения для автоматической печати:</string>
     <string name="quick_share_search">Поиск приложения</string>
     <string name="quick_share_printed">PDF отправлен на печать</string>
     <string name="quick_share_usb_denied">Доступ к USB отклонён</string>
+    <string name="quick_share_error_channel">Ошибки быстрой печати</string>
+    <string name="quick_share_error_title">TSC QuickPrint не смог напечатать</string>
+    <string name="quick_share_document_unavailable">Не удалось открыть PDF: отправитель не предоставил доступ к файлу.</string>
     <string name="history_empty">Заданий печати ещё нет</string>
     <string name="history_clear">Очистить историю</string>
     <string name="history_clear_confirm">Очистить? %1$d</string>

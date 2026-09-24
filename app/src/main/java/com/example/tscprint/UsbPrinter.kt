@@ -46,6 +46,21 @@ class UsbPrinter(private val context: Context) {
         return result
     }
 
+    fun findTarget(vendorId: Int, productId: Int): Target? {
+        val targets = findTargets()
+        if (vendorId == 0 && productId == 0) {
+            val printers = targets.filter {
+                it.device.deviceClass == UsbConstants.USB_CLASS_PRINTER ||
+                    it.usbInterface.interfaceClass == UsbConstants.USB_CLASS_PRINTER
+            }
+            return printers.singleOrNull()
+        }
+        return targets.firstOrNull {
+            (vendorId == 0 || it.device.vendorId == vendorId) &&
+                (productId == 0 || it.device.productId == productId)
+        }
+    }
+
     fun hasPermission(device: UsbDevice): Boolean = manager.hasPermission(device)
 
     fun requestPermission(device: UsbDevice, action: String) {
@@ -70,7 +85,7 @@ class UsbPrinter(private val context: Context) {
                         if (offset == 0 && len == data.size) data
                         else data.copyOfRange(offset, offset + len)
                     val sent = connection.bulkTransfer(target.outEndpoint, slice, len, timeoutMs)
-                    if (sent < 0) throw IllegalStateException("bulkTransfer вернул $sent")
+                    if (sent <= 0) throw IllegalStateException("bulkTransfer вернул $sent")
                     offset += sent
                 }
                 return offset

@@ -18,9 +18,9 @@ class PrintHistory(context: Context) {
 
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun list(): List<Entry> {
+    fun list(): List<Entry> = synchronized(LOCK) {
         val raw = prefs.getString(KEY_ENTRIES, null) ?: return emptyList()
-        return runCatching {
+        runCatching {
             val json = JSONArray(raw)
             (0 until json.length()).map { index ->
                 val item = json.getJSONObject(index)
@@ -37,34 +37,27 @@ class PrintHistory(context: Context) {
     }
 
     fun add(uri: Uri, name: String, pages: Int, copies: Int, status: String): Entry {
-        val entry = Entry(uri.toString(), name, System.currentTimeMillis(), pages, copies, status)
-        val all = (list() + entry).takeLast(MAX_ENTRIES)
-        val json = JSONArray()
-        all.forEach { item ->
-            json.put(JSONObject().apply {
-                put("uri", item.uri)
-                put("name", item.name)
-                put("timestamp", item.timestamp)
-                put("pages", item.pages)
-                put("copies", item.copies)
-                put("status", item.status)
-            })
+        return synchronized(LOCK) {
+            val entry = Entry(uri.toString(), name, System.currentTimeMillis(), pages, copies, status)
+            val all = (list() + entry).takeLast(MAX_ENTRIES)
+            save(all)
+            entry
         }
-        prefs.edit().putString(KEY_ENTRIES, json.toString()).apply()
-        return entry
     }
 
-    fun clear() = prefs.edit().remove(KEY_ENTRIES).apply()
+    fun clear() = synchronized(LOCK) { prefs.edit().remove(KEY_ENTRIES).commit() }
 
     fun remove(timestamp: Long) {
-        save(list().filterNot { it.timestamp == timestamp })
+        synchronized(LOCK) { save(list().filterNot { it.timestamp == timestamp }) }
     }
 
     fun updateStatus(timestamp: Long, status: String) {
-        val updated = list().map { entry ->
-            if (entry.timestamp == timestamp) entry.copy(status = status) else entry
+        synchronized(LOCK) {
+            val updated = list().map { entry ->
+                if (entry.timestamp == timestamp) entry.copy(status = status) else entry
+            }
+            save(updated)
         }
-        save(updated)
     }
 
     private fun save(entries: List<Entry>) {
@@ -79,12 +72,13 @@ class PrintHistory(context: Context) {
                 put("status", item.status)
             })
         }
-        prefs.edit().putString(KEY_ENTRIES, json.toString()).apply()
+        prefs.edit().putString(KEY_ENTRIES, json.toString()).commit()
     }
 
     companion object {
         private const val PREFS = "tsc_print_history"
         private const val KEY_ENTRIES = "entries"
         private const val MAX_ENTRIES = 20
+        private val LOCK = Any()
     }
 }

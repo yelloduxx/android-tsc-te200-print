@@ -103,12 +103,8 @@ class TscPrintService : PrintService() {
     }
 
     private fun findPrinter(printer: UsbPrinter): UsbPrinter.Target? {
-        val targets = printer.findTargets()
         val settings = PrintSettings(this)
-        return targets.firstOrNull {
-            (settings.vendorId == 0 || it.device.vendorId == settings.vendorId) &&
-                (settings.productId == 0 || it.device.productId == settings.productId)
-        } ?: targets.firstOrNull()
+        return printer.findTarget(settings.vendorId, settings.productId)
     }
 
     private inner class Session : PrinterDiscoverySession() {

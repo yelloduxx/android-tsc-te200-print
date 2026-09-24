@@ -38,6 +38,7 @@ class QuickShareSettingsActivity : Activity() {
         super.onCreate(savedInstanceState)
         setTitle(R.string.quick_share_settings)
         setContentView(buildUi())
+        if (quickShare.enabled) requestNotificationPermissionIfNeeded()
         refreshAppsInBackground()
     }
 
@@ -85,7 +86,10 @@ class QuickShareSettingsActivity : Activity() {
         root.addView(SwitchMaterial(this).apply {
             text = getString(R.string.quick_share_enabled)
             isChecked = quickShare.enabled
-            setOnCheckedChangeListener { _, checked -> quickShare.enabled = checked }
+            setOnCheckedChangeListener { _, checked ->
+                quickShare.enabled = checked
+                if (checked) requestNotificationPermissionIfNeeded()
+            }
         })
 
         root.addView(TextView(this).apply {
@@ -221,6 +225,15 @@ class QuickShareSettingsActivity : Activity() {
     }.getOrDefault(packageName)
 
     private fun packageName(): String = applicationContext.packageName
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 2001)
+        }
+    }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 

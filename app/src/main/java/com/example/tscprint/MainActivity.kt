@@ -134,7 +134,7 @@ class MainActivity : AppCompatActivity() {
             val bytes = pendingBytes
             pendingBytes = null
             if (bytes != null) {
-                val target = printer.findTargets().firstOrNull()
+                val target = configuredTarget()
                 if (target != null) {
                     doSend(target, bytes)
                 } else {
@@ -697,9 +697,13 @@ class MainActivity : AppCompatActivity() {
             if (queueRunning) stopPrintQueue()
             selectedUri = data?.data
             selectedUri?.let { uri ->
-                val takeFlags = (data?.flags ?: 0) and Intent.FLAG_GRANT_READ_URI_PERMISSION
-                if (takeFlags != 0) {
-                    runCatching { contentResolver.takePersistableUriPermission(uri, takeFlags) }
+                if ((data?.flags ?: 0) and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0) {
+                    runCatching {
+                        contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    }
                 }
             }
             prepared = null
@@ -850,7 +854,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updatePrinterStatus() {
         if (!::printerStatus.isInitialized) return
-        val target = printer.findTargets().firstOrNull()
+        val target = configuredTarget()
         val connected = target != null
         val allowed = connected && printer.hasPermission(target!!.device)
         fun show(label: String, color: Int) {
@@ -1106,7 +1110,7 @@ class MainActivity : AppCompatActivity() {
             status.text = getString(R.string.status_queue_done, queueCompleted)
             return
         }
-        val target = printer.findTargets().firstOrNull()
+        val target = configuredTarget()
         if (target == null) {
             queueRunning = false
             updatePrinterStatus()
@@ -1182,7 +1186,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun authorizeUsb() {
-        val target = printer.findTargets().firstOrNull()
+        val target = configuredTarget()
         if (target == null) {
             status.text = getString(R.string.status_usb_not_found)
             return
@@ -1200,7 +1204,7 @@ class MainActivity : AppCompatActivity() {
     private fun startSend(bytes: ByteArray) {
         lastPrinterError = null
         updatePrinterStatus()
-        val target = printer.findTargets().firstOrNull()
+        val target = configuredTarget()
         if (target == null) {
             lastPrinterError = getString(R.string.status_printer_disconnected)
             status.text = getString(R.string.status_usb_not_found)
@@ -1214,6 +1218,9 @@ class MainActivity : AppCompatActivity() {
         }
         doSend(target, bytes)
     }
+
+    private fun configuredTarget(): UsbPrinter.Target? =
+        printer.findTarget(settings.vendorId, settings.productId)
 
     private fun doSend(target: UsbPrinter.Target, bytes: ByteArray) {
         status.text = getString(R.string.status_sending, bytes.size, target.device.deviceName)
